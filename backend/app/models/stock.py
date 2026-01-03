@@ -29,7 +29,7 @@ class Stock(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
+    # Relationships (with cascade delete)
     prices = relationship("StockPrice", back_populates="stock", cascade="all, delete-orphan")
     news = relationship("NewsEvent", back_populates="stock", cascade="all, delete-orphan")
     correlations = relationship("EventPriceCorrelation", back_populates="stock", cascade="all, delete-orphan")

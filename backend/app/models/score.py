@@ -13,7 +13,7 @@ class PredictabilityScore(Base):
     __tablename__ = "predictability_scores"
 
     id = Column(Integer, primary_key=True, index=True)
-    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Score components (0-100)
     information_availability_score = Column(Integer)

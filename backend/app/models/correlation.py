@@ -13,8 +13,8 @@ class EventPriceCorrelation(Base):
     __tablename__ = "event_price_correlations"
 
     id = Column(Integer, primary_key=True, index=True)
-    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
-    news_event_id = Column(Integer, ForeignKey("news_events.id"))
+    stock_id = Column(Integer, ForeignKey("stocks.id", ondelete="CASCADE"), nullable=False, index=True)
+    news_event_id = Column(Integer, ForeignKey("news_events.id", ondelete="CASCADE"))
 
     # Event reference
     event_category = Column(String(50), nullable=False)

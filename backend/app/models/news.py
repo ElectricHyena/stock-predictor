@@ -13,7 +13,7 @@ class NewsEvent(Base):
     __tablename__ = "news_events"
 
     id = Column(Integer, primary_key=True, index=True)
-    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # News content
     headline = Column(String(500), nullable=False)

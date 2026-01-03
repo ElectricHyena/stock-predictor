@@ -1,10 +1,23 @@
-"""Initial migration - create all tables
+"""Initial migration - create all database tables
 
-Revision ID: 322ea9eccb10
-Revises: 
-Create Date: 2026-01-03 09:51:45.781809
+Revision ID: 001
+Revises:
+Create Date: 2026-01-03
 
+This migration creates all 8 core tables for the Stock Predictor application:
+- users: User accounts
+- stocks: Stock master data
+- stock_prices: Historical OHLCV data
+- news_events: News and events
+- event_categories: Event category classifications
+- sentiment_scores: Sentiment analysis results
+- event_price_correlations: Event-price correlations
+- predictability_scores: Predictability metrics
+
+All tables include proper foreign key constraints, cascading deletes,
+and indexes on frequently queried columns.
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -12,13 +25,31 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '322ea9eccb10'
+revision: str = '001'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    """Create all required database tables"""
+
+    # Create users table
+    op.create_table(
+        'users',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('email', sa.String(length=255), nullable=False),
+        sa.Column('password_hash', sa.String(length=255), nullable=False),
+        sa.Column('first_name', sa.String(length=100), nullable=True),
+        sa.Column('last_name', sa.String(length=100), nullable=True),
+        sa.Column('is_active', sa.Boolean(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.Column('updated_at', sa.DateTime(), nullable=True),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_users_id', 'users', ['id'], unique=False)
+    op.create_index('ix_users_email', 'users', ['email'], unique=True)
+
     # Create stocks table
     op.create_table(
         'stocks',
@@ -59,7 +90,7 @@ def upgrade() -> None:
         sa.Column('data_source', sa.String(length=50), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ),
+        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('stock_id', 'date', name='uq_stock_date')
     )
@@ -88,7 +119,7 @@ def upgrade() -> None:
         sa.Column('is_duplicate', sa.Boolean(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ),
+        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_news_events_id', 'news_events', ['id'], unique=False)
@@ -96,6 +127,34 @@ def upgrade() -> None:
     op.create_index('ix_news_events_event_date', 'news_events', ['event_date'], unique=False)
     op.create_index('ix_news_events_event_category', 'news_events', ['event_category'], unique=False)
     op.create_index('ix_news_events_content_hash', 'news_events', ['content_hash'], unique=False)
+
+    # Create event_categories table
+    op.create_table(
+        'event_categories',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('event_id', sa.Integer(), nullable=False),
+        sa.Column('category', sa.String(length=50), nullable=False),
+        sa.Column('confidence', sa.Float(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(['event_id'], ['news_events.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_event_categories_id', 'event_categories', ['id'], unique=False)
+    op.create_index('ix_event_categories_event_id', 'event_categories', ['event_id'], unique=False)
+    op.create_index('ix_event_categories_category', 'event_categories', ['category'], unique=False)
+
+    # Create sentiment_scores table
+    op.create_table(
+        'sentiment_scores',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('event_id', sa.Integer(), nullable=False),
+        sa.Column('sentiment_score', sa.Float(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(['event_id'], ['news_events.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('ix_sentiment_scores_id', 'sentiment_scores', ['id'], unique=False)
+    op.create_index('ix_sentiment_scores_event_id', 'sentiment_scores', ['event_id'], unique=False)
 
     # Create event_price_correlations table
     op.create_table(
@@ -115,8 +174,8 @@ def upgrade() -> None:
         sa.Column('confidence_score', sa.Float(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
         sa.Column('updated_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ),
-        sa.ForeignKeyConstraint(['news_event_id'], ['news_events.id'], ),
+        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['news_event_id'], ['news_events.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_event_price_correlations_id', 'event_price_correlations', ['id'], unique=False)
@@ -139,7 +198,7 @@ def upgrade() -> None:
         sa.Column('calculated_at', sa.DateTime(), nullable=True),
         sa.Column('is_current', sa.Boolean(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ),
+        sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_predictability_scores_id', 'predictability_scores', ['id'], unique=False)
@@ -147,11 +206,18 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Drop all database tables"""
+
     # Drop indices
     op.drop_index('ix_predictability_scores_stock_id', table_name='predictability_scores')
     op.drop_index('ix_predictability_scores_id', table_name='predictability_scores')
     op.drop_index('ix_event_price_correlations_stock_id', table_name='event_price_correlations')
     op.drop_index('ix_event_price_correlations_id', table_name='event_price_correlations')
+    op.drop_index('ix_sentiment_scores_event_id', table_name='sentiment_scores')
+    op.drop_index('ix_sentiment_scores_id', table_name='sentiment_scores')
+    op.drop_index('ix_event_categories_category', table_name='event_categories')
+    op.drop_index('ix_event_categories_event_id', table_name='event_categories')
+    op.drop_index('ix_event_categories_id', table_name='event_categories')
     op.drop_index('ix_news_events_content_hash', table_name='news_events')
     op.drop_index('ix_news_events_event_category', table_name='news_events')
     op.drop_index('ix_news_events_event_date', table_name='news_events')
@@ -163,10 +229,15 @@ def downgrade() -> None:
     op.drop_index('ix_stocks_market', table_name='stocks')
     op.drop_index('ix_stocks_ticker', table_name='stocks')
     op.drop_index('ix_stocks_id', table_name='stocks')
+    op.drop_index('ix_users_email', table_name='users')
+    op.drop_index('ix_users_id', table_name='users')
 
-    # Drop tables
+    # Drop tables in reverse order of dependencies
     op.drop_table('predictability_scores')
     op.drop_table('event_price_correlations')
+    op.drop_table('sentiment_scores')
+    op.drop_table('event_categories')
     op.drop_table('news_events')
     op.drop_table('stock_prices')
     op.drop_table('stocks')
+    op.drop_table('users')
