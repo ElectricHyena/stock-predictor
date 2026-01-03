@@ -36,7 +36,30 @@ backend/
 
 ## Setup
 
-### 1. Install Dependencies
+### Option 1: Docker Setup (Recommended)
+
+```bash
+# From project root directory
+docker-compose up -d
+
+# Run migrations (first time only)
+docker-compose exec web alembic upgrade head
+
+# Check services are running
+docker-compose ps
+
+# View logs
+docker-compose logs -f web
+```
+
+**Available at:**
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
+
+### Option 2: Local Development Setup
+
+#### 1. Install Dependencies
 
 ```bash
 # Create virtual environment
@@ -49,7 +72,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+#### 2. Configure Environment
 
 ```bash
 # Copy example environment file
@@ -58,21 +81,27 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-### 3. Initialize Database
+#### 3. Initialize Database
 
 ```bash
-# Create database (PostgreSQL)
+# Create database (PostgreSQL must be running)
 createdb stock_predictor
 
-# Run migrations (when available)
+# Run migrations
 alembic upgrade head
 ```
 
-### 4. Run Development Server
+#### 4. Run Development Server
 
 ```bash
 # Start FastAPI server with auto-reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# In another terminal, start Celery worker
+celery -A app.tasks worker --loglevel=info
+
+# Optionally, start Celery beat for scheduled tasks
+celery -A app.tasks beat --loglevel=info
 ```
 
 Visit:
@@ -145,15 +174,98 @@ Computed predictability scores
 - **Testing:** pytest
 - **Data:** pandas, numpy, scikit-learn
 
+## Docker Commands
+
+### Service Management
+
+```bash
+# Start services in background
+docker-compose up -d
+
+# Start with verbose logging
+docker-compose up
+
+# Stop all services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# View service status
+docker-compose ps
+
+# View logs
+docker-compose logs -f [service-name]
+
+# Execute command in service
+docker-compose exec web pytest
+```
+
+### Database Migrations in Docker
+
+```bash
+# Run pending migrations
+docker-compose exec web alembic upgrade head
+
+# Create new migration
+docker-compose exec web alembic revision -m "description"
+
+# Rollback one migration
+docker-compose exec web alembic downgrade -1
+
+# View migration history
+docker-compose exec web alembic history
+```
+
+### Common Issues
+
+**Services won't start:**
+```bash
+# Check port availability
+lsof -i :5432  # PostgreSQL
+lsof -i :6379  # Redis
+lsof -i :8000  # API
+
+# Kill process on port (if necessary)
+kill -9 $(lsof -ti:8000)
+```
+
+**Database connection errors:**
+```bash
+# Check PostgreSQL health
+docker-compose exec postgres pg_isready -U dev
+
+# View database logs
+docker-compose logs postgres
+
+# Reset database (WARNING: deletes data)
+docker-compose down -v
+docker-compose up -d postgres
+docker-compose exec web alembic upgrade head
+```
+
+**API not responding:**
+```bash
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Check API logs
+docker-compose logs -f web
+
+# Rebuild image (if changed)
+docker-compose build web
+docker-compose up -d web
+```
+
 ## Next Steps
 
-1. Set up database migrations (Alembic)
-2. Create API routes
-3. Implement data fetching services
-4. Implement analysis engine
-5. Set up background tasks (Celery)
-6. Add authentication
-7. Write comprehensive tests
+1. ✅ Set up database migrations (Alembic) - DONE
+2. Create API routes (Phase 2)
+3. Implement data fetching services (Phase 1)
+4. Implement analysis engine (Phase 3)
+5. Set up background tasks (Celery) - partially done
+6. Add authentication (Phase 6)
+7. Write comprehensive tests (Phase 6)
 
 ## Contributing
 
