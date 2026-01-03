@@ -1,0 +1,147 @@
+{
+  "analysis_date": "2026-01-02T22:14:50.417366",
+  "period": "03-Dec to 02-Jan",
+  "total_days": 23,
+  "positive_days": 13,
+  "negative_days": 8,
+  "data": [
+    {
+      "Date": "03-Dec",
+      "High": 844.0,
+      "Low": 807.8,
+      "Change%": 0.0
+    },
+    {
+      "Date": "04-Dec",
+      "High": 852.55,
+      "Low": 814.3,
+      "Change%": -1.16
+    },
+    {
+      "Date": "05-Dec",
+      "High": 832.3,
+      "Low": 811.2,
+      "Change%": 0.17
+    },
+    {
+      "Date": "08-Dec",
+      "High": 826.55,
+      "Low": 799.0,
+      "Change%": -1.89
+    },
+    {
+      "Date": "09-Dec",
+      "High": 803.45,
+      "Low": 777.4,
+      "Change%": -1.16
+    },
+    {
+      "Date": "10-Dec",
+      "High": 839.0,
+      "Low": 799.0,
+      "Change%": 2.17
+    },
+    {
+      "Date": "11-Dec",
+      "High": 830.0,
+      "Low": 803.05,
+      "Change%": -0.78
+    },
+    {
+      "Date": "12-Dec",
+      "High": 814.5,
+      "Low": 789.2,
+      "Change%": 0.18
+    },
+    {
+      "Date": "15-Dec",
+      "High": 817.0,
+      "Low": 802.05,
+      "Change%": 0.56
+    },
+    {
+      "Date": "16-Dec",
+      "High": 833.6,
+      "Low": 811.4,
+      "Change%": 2.01
+    },
+    {
+      "Date": "17-Dec",
+      "High": 863.95,
+      "Low": 823.55,
+      "Change%": 3.16
+    },
+    {
+      "Date": "18-Dec",
+      "High": 868.0,
+      "Low": 841.1,
+      "Change%": 0.22
+    },
+    {
+      "Date": "19-Dec",
+      "High": 864.6,
+      "Low": 849.65,
+      "Change%": -0.2
+    },
+    {
+      "Date": "22-Dec",
+      "High": 857.7,
+      "Low": 836.2,
+      "Change%": -0.84
+    },
+    {
+      "Date": "23-Dec",
+      "High": 872.95,
+      "Low": 849.55,
+      "Change%": 1.15
+    },
+    {
+      "Date": "24-Dec",
+      "High": 857.8,
+      "Low": 818.45,
+      "Change%": -4.15
+    },
+    {
+      "Date": "25-Dec",
+      "High": 821.3,
+      "Low": 821.3,
+      "Change%": 0.0
+    },
+    {
+      "Date": "26-Dec",
+      "High": 844.9,
+      "Low": 815.15,
+      "Change%": 1.8
+    },
+    {
+      "Date": "29-Dec",
+      "High": 832.4,
+      "Low": 816.65,
+      "Change%": -1.7
+    },
+    {
+      "Date": "30-Dec",
+      "High": 839.0,
+      "Low": 815.05,
+      "Change%": 1.14
+    },
+    {
+      "Date": "31-Dec",
+      "High": 838.2,
+      "Low": 820.15,
+      "Change%": 0.1
+    },
+    {
+      "Date": "01-Jan",
+      "High": 883.75,
+      "Low": 833.25,
+      "Change%": 5.6
+    },
+    {
+      "Date": "02-Jan",
+      "High": 887.2,
+      "Low": 865.5,
+      "Change%": 0.2
+    }
+  ]
+}

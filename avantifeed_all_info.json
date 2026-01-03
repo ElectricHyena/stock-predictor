@@ -1,0 +1,119 @@
+{
+  "timestamp": "2026-01-02T22:12:42.470017",
+  "symbol": "AVANTIFEED.NS",
+  "company": "Avanti Feeds",
+  "period": "Last 30 days",
+  "data": [
+    {
+      "source": "Company Overview",
+      "category": "company_info",
+      "date": "2026-01-02T22:12:42.471472",
+      "data": {
+        "company_name": "Avanti Feeds",
+        "website": "www.avantifeed.com",
+        "business": "Shrimp feed manufacturing and seafood processing",
+        "established": "2003",
+        "headquarters": "Andhra Pradesh, India"
+      }
+    },
+    {
+      "source": "Sector Analysis",
+      "category": "sector_news",
+      "date": "2026-01-02T22:12:42.472328",
+      "data": {
+        "sector": "Aquaculture & Seafood",
+        "industry_trends": [
+          "Increased demand for shrimp exports",
+          "US tariff changes favoring Indian seafood",
+          "Sustainability regulations",
+          "Global market dynamics"
+        ],
+        "key_catalysts": [
+          "India-US trade agreements",
+          "Domestic demand growth",
+          "Expansion of processing capacity",
+          "Export market opportunities"
+        ]
+      }
+    },
+    {
+      "source": "Earnings Calendar",
+      "category": "earnings",
+      "date": "2026-01-02T22:12:42.472059",
+      "data": {
+        "note": "Check NSE/BSE official website for latest earnings announcements",
+        "company": "Avanti Feeds",
+        "fiscal_year": "March 31"
+      }
+    },
+    {
+      "source": "Market Sentiment",
+      "category": "sentiment",
+      "date": "2026-01-02T22:12:42.782261",
+      "data": {
+        "5day_change_percent": 7.11,
+        "sentiment": "Bullish",
+        "volatility": "Monitor for opportunities"
+      }
+    },
+    {
+      "source": "Historical Analysis",
+      "category": "technical_analysis",
+      "date": "2026-01-02T22:12:42.798948",
+      "data": {
+        "total_days": 23,
+        "price_change": 6.336073082927962,
+        "highest_price": 887.2000122070312,
+        "lowest_price": 777.4000244140625,
+        "avg_volume": 672303.3478260869
+      }
+    },
+    {
+      "source": "Yahoo Finance",
+      "category": "financial_data",
+      "date": "2026-01-02T22:12:42.797259",
+      "data": {
+        "latest_price": 880.25,
+        "52_week_high": 887.2000122070312,
+        "52_week_low": 777.4000244140625,
+        "volume_average": 672303.3478260869
+      }
+    },
+    {
+      "source": "RSS Feeds",
+      "category": "news",
+      "date": "2026-01-02T22:12:43.034129",
+      "data": []
+    },
+    {
+      "source": "BSE Data",
+      "category": "bse_financial",
+      "date": "2026-01-02T22:12:43.076706",
+      "data": {
+        "latest_close": 880.25,
+        "volume": 84411.0,
+        "records": 23
+      }
+    },
+    {
+      "source": "Yahoo Finance (Ticker Info)",
+      "category": "ticker_info",
+      "date": "2026-01-02T22:12:43.195510",
+      "data": {
+        "market_cap": 120061222912,
+        "pe_ratio": 19.38023,
+        "dividend_yield": 1.02,
+        "profit_margin": 0.10356,
+        "roe": 0.20798999,
+        "sector": "Consumer Defensive",
+        "industry": "Packaged Foods"
+      }
+    },
+    {
+      "source": "Peer Comparison",
+      "category": "market_analysis",
+      "date": "2026-01-02T22:12:45.153932",
+      "data": {}
+    }
+  ]
+}
