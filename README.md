@@ -304,6 +304,243 @@ Workflow runs on:
 - Push to `main` or `develop` branches
 - Pull requests to `main` or `develop`
 
+## Docker Port Configuration & Conflict Resolution
+
+### Port Configuration Overview
+
+The StockPredictor project uses **environment variables** for all port mappings to prevent conflicts with existing services on your system. This allows multiple developers to run the service on different ports without modifying configuration files.
+
+**Default Ports:**
+- **PostgreSQL:** 5432 (configurable via `POSTGRES_PORT`)
+- **Redis:** 6379 (configurable via `REDIS_PORT`)
+- **FastAPI API:** 8000 (configurable via `API_PORT`)
+- **Celery Worker:** Internal only (no port exposed)
+- **Celery Beat:** Internal only (no port exposed)
+
+### Port Availability Check
+
+Before starting the services, run the port availability checker to detect conflicts:
+
+```bash
+# Check if default ports are available
+./scripts/check-ports.sh
+
+# Or check specific ports
+./scripts/check-ports.sh 5433 6380 8001
+```
+
+The script will report which ports are in use and suggest alternatives:
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║         StockPredictor Port Availability Check                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+Configuration:
+  PostgreSQL Port: 5432
+  Redis Port:      6379
+  API Port:        8000
+
+Port Availability:
+Checking PostgreSQL... ✓ Available (port 5432)
+Checking Redis... ✓ Available (port 6379)
+Checking FastAPI... ✓ Available (port 8000)
+
+✓ All ports are available!
+
+You can now start the services:
+  docker-compose up -d
+```
+
+### Port Conflict Resolution
+
+If ports are already in use on your system, follow these steps:
+
+#### Option 1: Using Alternative Ports (Recommended)
+
+Edit the `.env` file and change the port numbers:
+
+```env
+# .env
+POSTGRES_PORT=5433   # Was 5432
+REDIS_PORT=6380      # Was 6379
+API_PORT=8001        # Was 8000
+```
+
+Then restart the services:
+
+```bash
+docker-compose down
+docker-compose up -d
+```
+
+#### Option 2: Using Override Command
+
+Set ports in the command line (overrides .env):
+
+```bash
+POSTGRES_PORT=5433 REDIS_PORT=6380 API_PORT=8001 docker-compose up -d
+```
+
+#### Option 3: Stop Conflicting Services
+
+If you don't need the existing services, stop them:
+
+```bash
+# macOS / Linux
+lsof -i :5432   # Find what's using port 5432
+kill -9 <PID>   # Kill the process
+
+# Or use the port checking script
+./scripts/check-ports.sh
+```
+
+### Diagnosing Port Conflicts
+
+#### "Port X is already in use" Error
+
+```bash
+# Find which process is using the port
+lsof -i :5432  # macOS
+# or
+netstat -tuln | grep 5432  # Linux
+
+# Output example:
+# postgres   123  user   10u  IPv4  0x12345678      0t0  TCP 127.0.0.1:5432 (LISTEN)
+```
+
+The output shows:
+- **Process:** `postgres` (the application using the port)
+- **PID:** `123` (process ID)
+- **Port:** `5432` (the port number)
+
+**Resolution:**
+- Stop the service: `sudo systemctl stop postgresql` or similar
+- Or change the port in `.env` and restart docker-compose
+
+#### "Container won't start" Error
+
+```bash
+# Check the Docker logs to see what's wrong
+docker-compose logs web
+docker-compose logs postgres
+docker-compose logs redis
+
+# Output might show:
+# ERROR: bind: address already in use
+```
+
+**Debug steps:**
+
+```bash
+# Verify port is actually in use
+docker ps | grep <container-name>
+
+# Try using alternative ports
+POSTGRES_PORT=5433 REDIS_PORT=6380 API_PORT=8001 docker-compose up -d
+
+# Check if services start successfully
+docker-compose ps
+```
+
+#### "Services can't communicate" Error
+
+If containers start but can't connect to each other, verify:
+
+```bash
+# Services use internal service names (not localhost)
+# Check docker network
+docker network ls
+docker network inspect stock-predictor-network
+
+# Verify connectivity from app container
+docker-compose exec web curl http://postgres:5432  # Should fail with connection error, not "unknown host"
+docker-compose exec web redis-cli -h redis ping   # Should respond with PONG
+```
+
+**Important:** Internal service communication uses service names (e.g., `postgres:5432`), not `localhost:5432`. This is configured automatically in the application environment variables.
+
+### Environment Variable Configuration
+
+All services use these environment variables from `.env`:
+
+```bash
+# Database
+POSTGRES_PORT=5432
+POSTGRES_USER=dev
+POSTGRES_PASSWORD=devpass
+POSTGRES_DB=stock_predictor
+
+# Redis
+REDIS_PORT=6379
+
+# FastAPI
+API_PORT=8000
+DEBUG=True
+
+# Connection URLs (built automatically)
+DATABASE_URL=postgresql://dev:devpass@postgres:5432/stock_predictor
+REDIS_URL=redis://redis:6379
+CELERY_BROKER_URL=redis://redis:6379/0
+```
+
+**Key Points:**
+- Port environment variables affect the host machine port mappings
+- Internal service names (postgres, redis, web) stay the same
+- Connection strings use service names internally (e.g., `postgres:5432`)
+- External access uses localhost with mapped ports (e.g., `localhost:5432`)
+
+### Examples
+
+**Scenario 1: PostgreSQL already running locally on 5432**
+
+```bash
+# Update .env
+echo "POSTGRES_PORT=5433" >> .env
+
+# Restart services
+docker-compose down
+docker-compose up -d
+
+# Verify
+docker ps | grep stock-predictor-db
+# Should show: 0.0.0.0:5433->5432/tcp
+```
+
+**Scenario 2: Check and fix all conflicts at once**
+
+```bash
+# Run port checker
+./scripts/check-ports.sh
+
+# If conflicts found, use suggested ports
+POSTGRES_PORT=5433 REDIS_PORT=6380 API_PORT=8001 docker-compose up -d
+
+# Verify all services are healthy
+docker-compose ps
+# Should show all containers with healthy status
+```
+
+**Scenario 3: Multiple developers with different ports**
+
+Each developer uses their own `.env` file:
+
+**Developer 1 (.env):**
+```env
+POSTGRES_PORT=5432
+REDIS_PORT=6379
+API_PORT=8000
+```
+
+**Developer 2 (.env):**
+```env
+POSTGRES_PORT=5433
+REDIS_PORT=6380
+API_PORT=8001
+```
+
+Both can run simultaneously without conflicts!
+
 ## Troubleshooting
 
 ### Services won't start
