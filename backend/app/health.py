@@ -120,20 +120,66 @@ class HealthChecker:
             "timestamp": datetime.utcnow().isoformat()
         }
 
+    async def check_all(self) -> Dict[str, Any]:
+        """Check all dependencies and return overall health status"""
+        checks = {
+            "database": await self.check_database(),
+            "redis": await self.check_redis(),
+            "external_apis": await self.check_external_apis()
+        }
 
-# Global health checker instance
-health_checker: Optional[HealthChecker] = None
+        # Count healthy/unhealthy
+        healthy_count = sum(1 for c in checks.values() if c.get("status") == "healthy")
+        total_count = len(checks)
+
+        overall_status = "healthy" if healthy_count == total_count else "degraded"
+        if all(c.get("status") == "unhealthy" for c in checks.values()):
+            overall_status = "unhealthy"
+
+        return {
+            "status": overall_status,
+            "checks": checks,
+            "healthy": healthy_count,
+            "total": total_count,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+
+# Global health checker instance - created lazily
+class LazyHealthChecker:
+    """Lazy-loading health checker proxy"""
+    _instance: Optional[HealthChecker] = None
+
+    async def check_all(self) -> Dict[str, Any]:
+        if self._instance is None:
+            from app.config import settings
+            self._instance = HealthChecker(redis_url=getattr(settings, 'REDIS_URL', None))
+        return await self._instance.check_all()
+
+    async def check_database(self) -> Dict[str, Any]:
+        if self._instance is None:
+            from app.config import settings
+            self._instance = HealthChecker(redis_url=getattr(settings, 'REDIS_URL', None))
+        return await self._instance.check_database()
+
+    async def check_redis(self) -> Dict[str, Any]:
+        if self._instance is None:
+            from app.config import settings
+            self._instance = HealthChecker(redis_url=getattr(settings, 'REDIS_URL', None))
+        return await self._instance.check_redis()
+
+
+health_checker = LazyHealthChecker()
 
 
 def initialize_health_checker(db_session=None, redis_url: Optional[str] = None):
     """Initialize the global health checker"""
-    global health_checker
-    health_checker = HealthChecker(db_session=db_session, redis_url=redis_url)
+    health_checker._instance = HealthChecker(db_session=db_session, redis_url=redis_url)
 
 
 def get_health_checker() -> HealthChecker:
     """Get the global health checker instance"""
-    global health_checker
-    if health_checker is None:
-        health_checker = HealthChecker()
-    return health_checker
+    if health_checker._instance is None:
+        from app.config import settings
+        health_checker._instance = HealthChecker(redis_url=getattr(settings, 'REDIS_URL', None))
+    return health_checker._instance

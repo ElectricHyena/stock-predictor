@@ -4,16 +4,20 @@ Main application factory and middleware setup
 """
 
 import logging
+import time
+import uuid
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 from app.config import settings
-from app.database import Base
+from app.database import Base, get_db
 from app import schemas
 from app.api.router import api_router, http_exception_handler, general_exception_handler
+from app.metrics import metrics
+from app.health import health_checker
 
 # Configure logging
 logging.basicConfig(
@@ -60,7 +64,7 @@ app.add_middleware(
 
 @app.get("/health", tags=["health"], response_model=schemas.HealthResponse)
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint - basic liveness probe"""
     return schemas.HealthResponse(
         status="ok",
         service="stockpredictor-api",
@@ -71,6 +75,33 @@ async def health_check():
             "cache": "redis",
             "task_queue": "celery"
         }
+    )
+
+
+@app.get("/health/live", tags=["health"])
+async def liveness_probe():
+    """Kubernetes liveness probe - is the app running?"""
+    return {"status": "alive", "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/health/ready", tags=["health"])
+async def readiness_probe():
+    """Kubernetes readiness probe - is the app ready to serve traffic?"""
+    health_status = await health_checker.check_all()
+    if health_status["status"] == "healthy":
+        return {"status": "ready", "checks": health_status["checks"]}
+    return JSONResponse(
+        status_code=503,
+        content={"status": "not_ready", "checks": health_status["checks"]}
+    )
+
+
+@app.get("/metrics", tags=["monitoring"])
+async def prometheus_metrics():
+    """Prometheus metrics endpoint"""
+    return PlainTextResponse(
+        content=metrics.get_metrics_output(),
+        media_type="text/plain; charset=utf-8"
     )
 
 
@@ -114,10 +145,33 @@ app.add_exception_handler(Exception, general_exception_handler)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all HTTP requests"""
-    logger.debug(f"{request.method} {request.url.path}")
+    """Log all HTTP requests with metrics collection"""
+    request_id = str(uuid.uuid4())[:8]
+    start_time = time.time()
+
+    # Add request_id to request state for logging
+    request.state.request_id = request_id
+
+    logger.info(f"[{request_id}] {request.method} {request.url.path}")
+
     response = await call_next(request)
-    logger.debug(f"Response: {response.status_code}")
+
+    duration = time.time() - start_time
+
+    # Record metrics
+    metrics.record_http_request(
+        method=request.method,
+        endpoint=request.url.path,
+        status_code=response.status_code,
+        duration=duration
+    )
+
+    logger.info(f"[{request_id}] {response.status_code} in {duration:.3f}s")
+
+    # Add response headers
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Response-Time"] = f"{duration:.3f}s"
+
     return response
 
 

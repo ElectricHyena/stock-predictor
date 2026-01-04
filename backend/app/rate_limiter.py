@@ -2,13 +2,18 @@
 Rate Limiting Implementation
 """
 import time
+import os
 import redis
 from functools import wraps
 from typing import Tuple, Optional
 from fastapi import Request, HTTPException, status
 
-from app.config import REDIS_URL, RATE_LIMITING_ENABLED
+from app.config import settings
 from app.exceptions import RateLimitError
+
+# Configuration from settings or environment
+REDIS_URL = getattr(settings, 'REDIS_URL', os.getenv('REDIS_URL', 'redis://localhost:6379'))
+RATE_LIMITING_ENABLED = os.getenv('RATE_LIMITING_ENABLED', 'false').lower() == 'true'
 
 
 class RateLimiter:
