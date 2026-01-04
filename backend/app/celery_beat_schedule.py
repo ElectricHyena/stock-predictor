@@ -34,7 +34,7 @@ CELERY_BEAT_SCHEDULE = {
                 "interval_max": 300,
             },
         },
-        "description": "Fetch stock prices for all tracked stocks (SLO: 5 minutes)",
+        # Fetch stock prices for all tracked stocks (SLO: 5 minutes)
     },
     # News update task - every 30 minutes
     "fetch_news": {
@@ -53,7 +53,7 @@ CELERY_BEAT_SCHEDULE = {
                 "interval_max": 600,
             },
         },
-        "description": "Fetch news articles for all tracked stocks (SLO: 30 minutes)",
+        # Fetch news articles for all tracked stocks (SLO: 30 minutes)
     },
     # Health check task - every 1 minute
     "health_check": {
@@ -65,7 +65,7 @@ CELERY_BEAT_SCHEDULE = {
             "queue": "default",
             "expires": 70,
         },
-        "description": "Health check to verify Celery worker is operational",
+        # Health check to verify Celery worker is operational
     },
     # Correlation regeneration task - weekly
     "regenerate_correlations": {
@@ -84,7 +84,7 @@ CELERY_BEAT_SCHEDULE = {
                 "interval_max": 3600,
             },
         },
-        "description": "Regenerate event-price correlations for all stocks (weekly)",
+        # Regenerate event-price correlations for all stocks (weekly)
     },
     # Alert check task - every 1 minute
     "check_alerts": {
@@ -96,7 +96,7 @@ CELERY_BEAT_SCHEDULE = {
             "queue": "default",
             "expires": 120,
         },
-        "description": "Check and trigger alerts based on current conditions",
+        # Check and trigger alerts based on current conditions
     },
 }
 

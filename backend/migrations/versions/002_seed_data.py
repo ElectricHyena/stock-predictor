@@ -9,6 +9,7 @@ stocks used in testing and development.
 """
 
 from typing import Sequence, Union
+from datetime import datetime
 
 from alembic import op
 import sqlalchemy as sa
@@ -36,7 +37,9 @@ def upgrade() -> None:
         sa.column('updated_at', sa.DateTime),
     )
 
-    op.bulk_insert_stmt = op.bulk_insert(
+    now = datetime.utcnow()
+
+    op.bulk_insert(
         stocks_table,
         [
             {
@@ -45,8 +48,8 @@ def upgrade() -> None:
                 'market': 'NYSE',
                 'sector': 'Technology',
                 'industry': 'Consumer Electronics',
-                'created_at': sa.func.now(),
-                'updated_at': sa.func.now(),
+                'created_at': now,
+                'updated_at': now,
             },
             {
                 'ticker': 'GOOGL',
@@ -54,8 +57,8 @@ def upgrade() -> None:
                 'market': 'NASDAQ',
                 'sector': 'Technology',
                 'industry': 'Internet Services',
-                'created_at': sa.func.now(),
-                'updated_at': sa.func.now(),
+                'created_at': now,
+                'updated_at': now,
             },
             {
                 'ticker': 'MSFT',
@@ -63,8 +66,8 @@ def upgrade() -> None:
                 'market': 'NASDAQ',
                 'sector': 'Technology',
                 'industry': 'Software',
-                'created_at': sa.func.now(),
-                'updated_at': sa.func.now(),
+                'created_at': now,
+                'updated_at': now,
             },
             {
                 'ticker': 'AMZN',
@@ -72,8 +75,8 @@ def upgrade() -> None:
                 'market': 'NASDAQ',
                 'sector': 'Consumer Cyclical',
                 'industry': 'Internet Retail',
-                'created_at': sa.func.now(),
-                'updated_at': sa.func.now(),
+                'created_at': now,
+                'updated_at': now,
             },
             {
                 'ticker': 'TSLA',
@@ -81,13 +84,11 @@ def upgrade() -> None:
                 'market': 'NASDAQ',
                 'sector': 'Consumer Cyclical',
                 'industry': 'Automobiles',
-                'created_at': sa.func.now(),
-                'updated_at': sa.func.now(),
+                'created_at': now,
+                'updated_at': now,
             },
         ]
     )
-
-    op.execute(op.bulk_insert_stmt)
 
 
 def downgrade() -> None:

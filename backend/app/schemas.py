@@ -339,7 +339,7 @@ class StockSearchResult(BaseModel):
     sector: Optional[str] = None
     current_price: Optional[float] = None
     has_analysis: bool
-    analysis_status: str
+    analysis_status: Optional[str] = "pending"
 
     model_config = ConfigDict(from_attributes=True)
 

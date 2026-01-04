@@ -1,5 +1,3 @@
-version: '3.8'
-
 # PORTS CONFIGURATION
 # ====================
 # This docker-compose file uses environment variables for all port mappings to enable
@@ -80,11 +78,11 @@ services:
     environment:
       DEBUG: ${DEBUG:-True}
       HOST: 0.0.0.0
-      PORT: ${API_PORT:-8000}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-dev}:${POSTGRES_PASSWORD:-devpass}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-stock_predictor}
-      REDIS_URL: redis://redis:${REDIS_PORT:-6379}
-      CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6379}/0
-      CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6379}/0
+      PORT: 8000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dev}:${POSTGRES_PASSWORD:-devpass}@postgres:5432/${POSTGRES_DB:-stock_predictor}
+      REDIS_URL: redis://redis:6379
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       NEWSAPI_KEY: ${NEWSAPI_KEY:-}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
     ports:
@@ -97,7 +95,7 @@ services:
     volumes:
       - ./backend:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${API_PORT:-8000}/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -105,7 +103,7 @@ services:
     networks:
       - stock-predictor-network
     restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-8000} --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Celery Worker
   celery_worker:
@@ -115,10 +113,10 @@ services:
     container_name: stock-predictor-celery
     environment:
       DEBUG: ${DEBUG:-True}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-dev}:${POSTGRES_PASSWORD:-devpass}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-stock_predictor}
-      REDIS_URL: redis://redis:${REDIS_PORT:-6379}
-      CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6379}/0
-      CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6379}/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dev}:${POSTGRES_PASSWORD:-devpass}@postgres:5432/${POSTGRES_DB:-stock_predictor}
+      REDIS_URL: redis://redis:6379
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       NEWSAPI_KEY: ${NEWSAPI_KEY:-}
     depends_on:
       redis:
@@ -140,10 +138,10 @@ services:
     container_name: stock-predictor-celery-beat
     environment:
       DEBUG: ${DEBUG:-True}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-dev}:${POSTGRES_PASSWORD:-devpass}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-stock_predictor}
-      REDIS_URL: redis://redis:${REDIS_PORT:-6379}
-      CELERY_BROKER_URL: redis://redis:${REDIS_PORT:-6379}/0
-      CELERY_RESULT_BACKEND: redis://redis:${REDIS_PORT:-6379}/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dev}:${POSTGRES_PASSWORD:-devpass}@postgres:5432/${POSTGRES_DB:-stock_predictor}
+      REDIS_URL: redis://redis:6379
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       NEWSAPI_KEY: ${NEWSAPI_KEY:-}
     depends_on:
       redis:
