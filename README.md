@@ -1,639 +1,245 @@
-# StockPredictor - Stock Predictability Analysis Platform
+# StockPredictor
 
-A comprehensive platform for analyzing historical stock data to identify predictable patterns and predict future price movements based on news events and market correlations.
+Full-stack stock analysis and prediction platform with ML-based predictability scoring, technical indicators, backtesting, and alert systems.
 
-## Overview
+![Build Status](https://github.com/ElectricHyena/stock-predictor/actions/workflows/ci-cd.yml/badge.svg)
 
-StockPredictor uses 1+ years of historical stock data combined with news events to:
-- Identify which price movements were predictable vs. unpredictable surprises
-- Score stocks by their predictability (0-100 score)
-- Predict future price movements based on historical event-price correlations
-- Provide backtesting capabilities to validate trading strategies
+## Features
+
+- **Stock Search & Analysis** - Search stocks, view historical data with technical indicators (RSI, MACD, SMA, EMA)
+- **Predictability Scoring** - ML-based scoring analyzing price patterns, volatility, and correlations
+- **Backtesting Engine** - Build and test trading strategies with equity curve visualization
+- **Watchlist Management** - Track favorite stocks with portfolio insights
+- **Alert System** - Price alerts, prediction changes, volume spikes with notifications
+- **News Integration** - Real-time news sentiment analysis via NewsAPI
 
 ## Tech Stack
 
-### Backend
-- **Framework:** FastAPI with async/await
-- **Database:** PostgreSQL with SQLAlchemy ORM
-- **Cache:** Redis for caching and message broker
-- **Background Jobs:** Celery with Redis broker
-- **Testing:** pytest with coverage
-
-### Frontend
-- **Framework:** Next.js 14 with React 18
-- **Language:** TypeScript
-- **Styling:** TailwindCSS
-- **State Management:** Zustand + TanStack Query
-- **UI Components:** shadcn/ui
-
-### DevOps
-- **Containerization:** Docker & Docker Compose
-- **CI/CD:** GitHub Actions
-- **Version Control:** Git
+| Layer | Technology |
+|-------|------------|
+| Backend | FastAPI, SQLAlchemy, PostgreSQL, Celery, Redis |
+| Frontend | Next.js 14, React Query, Recharts, Tailwind CSS |
+| Data | Yahoo Finance API, NewsAPI |
+| Infrastructure | Docker, Docker Compose, GitHub Actions CI/CD |
 
 ## Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose (recommended)
-- Python 3.10+ (for local development)
-- Node.js 18+ (for frontend development)
 
-### Option 1: Using Docker Compose (Recommended)
+- Docker & Docker Compose (recommended)
+- Or: Python 3.10+, Node.js 18+, PostgreSQL 14+, Redis 7+
+
+### Option 1: Docker Compose (Recommended)
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/ElectricHyena/stock-predictor.git
 cd stock-predictor
 
-# Copy environment file
+# Copy environment files
 cp .env.example .env
+
+# Edit .env with your API keys (NEWSAPI_KEY required)
+# Get one free at https://newsapi.org
 
 # Start all services
 docker-compose up -d
 
-# Run database migrations (first time only)
-docker-compose exec web alembic upgrade head
+# Run database migrations
+docker-compose exec backend alembic upgrade head
 
-# Check service health
-docker-compose ps
-
-# View logs
-docker-compose logs -f web
+# Check health
+curl http://localhost:8000/health
 ```
 
-**Services will be available at:**
-- FastAPI Backend: http://localhost:8000
+**Access the application:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
 - API Docs (Swagger): http://localhost:8000/docs
-- API Docs (ReDoc): http://localhost:8000/redoc
-- Health Check: http://localhost:8000/health
 
-### Option 2: Local Development
+### Option 2: Manual Setup
+
+#### Backend
 
 ```bash
-# Backend setup
 cd backend
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your configuration
-
-# Create database (ensure PostgreSQL is running)
-createdb stock_predictor
+# Edit .env with DATABASE_URL, REDIS_URL, NEWSAPI_KEY
 
 # Run migrations
 alembic upgrade head
 
-# Start development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# In another terminal, start Celery worker
-celery -A app.tasks worker --loglevel=info
+# Start server
+uvicorn app.main:app --reload --port 8000
 ```
 
-## Docker Setup Details
+#### Frontend
 
-### Services
+```bash
+cd frontend
 
-**postgres** - PostgreSQL 15 database
-- User: `dev` (configurable)
-- Password: `devpass` (configurable)
-- Database: `stock_predictor`
-- Port: `5432`
+# Install dependencies
+npm install
 
-**redis** - Redis 7 cache and message broker
-- Port: `6379`
+# Configure environment
+cp .env.example .env.local
+# Set NEXT_PUBLIC_API_URL=http://localhost:8000
 
-**web** - FastAPI application
-- Port: `8000`
-- Includes live reload for development
-- Health check: `GET /health`
+# Start development server
+npm run dev
+```
 
-**celery_worker** - Background job processor
-- Processes data fetching, analysis, and prediction tasks
-- Connects to Redis and PostgreSQL
+#### Celery Workers (background tasks)
 
-**celery_beat** - Task scheduler
-- Schedules recurring tasks like data updates and analysis
+```bash
+cd backend
 
-### Environment Configuration
+# Worker (processes tasks)
+celery -A app.celery_config worker --loglevel=info
 
-Edit `.env` file to customize:
+# Beat (scheduled tasks - alerts, data refresh)
+celery -A app.celery_config beat --loglevel=info
+```
+
+## Environment Variables
+
+### Backend (.env)
 
 ```env
-# FastAPI
-DEBUG=True
-HOST=0.0.0.0
-PORT=8000
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/stock_predictor
 
-# PostgreSQL
-POSTGRES_USER=dev
-POSTGRES_PASSWORD=devpass
-POSTGRES_DB=stock_predictor
-
-# Redis (no auth in default config)
-REDIS_PORT=6379
+# Redis
+REDIS_URL=redis://localhost:6379/0
 
 # API Keys
 NEWSAPI_KEY=your_newsapi_key_here
 
 # Security
-SECRET_KEY=dev-secret-key-change-in-production
+SECRET_KEY=your-secret-key-here
 ```
 
-## Development Workflow
+### Frontend (.env.local)
 
-### Running Services
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Start with verbose logging
-docker-compose up
-
-# Stop services
-docker-compose down
-
-# Restart services
-docker-compose restart
-
-# View logs
-docker-compose logs -f [service-name]
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### Database Migrations
+## API Endpoints
 
-```bash
-# Create a new migration
-docker-compose exec web alembic revision -m "Description of changes"
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/stocks/search` | GET | Search stocks by query |
+| `/api/v1/stocks/{ticker}` | GET | Get stock details |
+| `/api/v1/stocks/{ticker}/historical` | GET | Historical price data |
+| `/api/v1/stocks/{ticker}/analysis` | GET | Predictability analysis |
+| `/api/v1/backtests` | POST | Run backtest simulation |
+| `/api/v1/backtests/{id}` | GET | Get backtest results |
+| `/api/v1/watchlists` | GET/POST | Manage watchlists |
+| `/api/v1/alerts` | GET/POST | Manage price alerts |
+| `/health` | GET | Health check |
 
-# Apply all pending migrations
-docker-compose exec web alembic upgrade head
-
-# Rollback one migration
-docker-compose exec web alembic downgrade -1
-
-# View migration history
-docker-compose exec web alembic history
-```
-
-### Testing
-
-```bash
-# Run all tests
-docker-compose exec web pytest
-
-# Run tests with coverage
-docker-compose exec web pytest --cov=app tests/
-
-# Run specific test file
-docker-compose exec web pytest tests/test_health.py -v
-
-# Run with verbose output
-docker-compose exec web pytest -v
-```
-
-### Code Quality
-
-```bash
-# Format code
-docker-compose exec web black app/
-
-# Check imports
-docker-compose exec web isort app/
-
-# Lint code
-docker-compose exec web flake8 app/
-
-# Type checking
-docker-compose exec web mypy app/
-```
+Full API documentation at `/docs` when running the backend.
 
 ## Project Structure
 
 ```
 stock-predictor/
-├── backend/                  # FastAPI backend
+├── backend/
 │   ├── app/
-│   │   ├── main.py          # Application entry point
-│   │   ├── config.py        # Configuration management
-│   │   ├── database.py      # Database setup
-│   │   ├── schemas.py       # Pydantic models
-│   │   ├── models/          # SQLAlchemy ORM models
-│   │   │   ├── stock.py     # Stock master table
-│   │   │   ├── price.py     # Price history
-│   │   │   ├── news.py      # News events
-│   │   │   ├── correlation.py # Event-price correlations
-│   │   │   └── score.py     # Predictability scores
-│   │   ├── api/             # API route handlers
-│   │   ├── services/        # Business logic
-│   │   └── tasks/           # Celery background tasks
-│   ├── migrations/          # Alembic database migrations
-│   ├── tests/               # Test suite
-│   ├── requirements.txt     # Python dependencies
-│   ├── Dockerfile           # Container image definition
-│   ├── .dockerignore        # Docker build ignore patterns
-│   └── README.md            # Backend-specific docs
-├── frontend/                # Next.js frontend (TBD)
-├── docker-compose.yml       # Multi-service orchestration
-├── .env.example             # Environment variables template
-├── .github/workflows/       # CI/CD pipelines
-│   └── ci-cd.yml           # GitHub Actions workflow
-└── README.md               # This file
+│   │   ├── api/           # API routes (stocks, backtest, alerts, watchlist)
+│   │   ├── analysis/      # ML modules (predictor, sentiment, correlator)
+│   │   ├── models/        # SQLAlchemy ORM models
+│   │   ├── services/      # Data fetchers (Yahoo Finance, NewsAPI)
+│   │   ├── middleware/    # Error handling
+│   │   ├── tasks.py       # Celery background tasks
+│   │   └── schemas.py     # Pydantic request/response schemas
+│   ├── migrations/        # Alembic database migrations
+│   └── tests/             # 242 pytest tests
+├── frontend/
+│   ├── app/               # Next.js 14 app router (11 routes)
+│   ├── components/        # React components (charts, forms, tables)
+│   └── lib/               # API client, utilities
+├── docs/
+│   ├── API.md
+│   └── ARCHITECTURE.md
+└── docker-compose.yml
 ```
 
-## Database Schema
+## Running Tests
 
-### Core Tables
-
-**stocks** - Master stock data
-- ticker (unique), company_name, market (NSE/BSE/NYSE), sector, industry
-- last_price_updated_at, last_news_updated_at, analysis_status
-
-**stock_prices** - Historical OHLCV data
-- Unique constraint on (stock_id, date) prevents duplicates
-- Includes calculated fields: daily_return_pct, price_range
-- Indexed on: stock_id, date
-
-**news_events** - News articles and events
-- event_category (earnings, policy, seasonal, technical, sector)
-- sentiment_score, sentiment_category
-- content_hash for deduplication (is_duplicate flag)
-- Indexed on: stock_id, event_date, event_category, content_hash
-
-**event_price_correlations** - Historical event-price relationships
-- Tracks how specific events correlate with price movements
-- historical_win_rate, sample_size, confidence_score for pattern strength
-
-**predictability_scores** - Computed predictability metrics
-- Overall score (0-100) plus component scores
-- current_events, prediction_direction, prediction_magnitude
-
-## API Endpoints
-
-### Health & Status
-- `GET /` - API info and documentation links
-- `GET /health` - Health check endpoint
-
-### Stock Data (Phase 2 - TBD)
-- `GET /stocks/search?q=` - Search stocks by symbol/name
-- `GET /stocks/{ticker}` - Get stock details and predictability
-- `GET /stocks/{ticker}/prices` - Historical price data
-- `GET /stocks/{ticker}/news` - Related news events
-
-### Analysis (Phase 3 - TBD)
-- `GET /stocks/{ticker}/predictability` - Predictability score
-- `GET /stocks/{ticker}/prediction` - Price movement prediction
-- `POST /stocks/{ticker}/backtest` - Test trading strategy
-- `GET /stocks/{ticker}/analysis` - Full analysis report
-
-## CI/CD Pipeline
-
-The project includes a comprehensive GitHub Actions workflow that:
-
-1. **Runs Tests** - pytest with coverage reporting
-2. **Checks Code Quality** - flake8, mypy, black, isort
-3. **Builds Docker Image** - Multi-stage build for production
-4. **Security Scanning** - Trivy vulnerability scanner
-5. **Verifies Docker Compose** - Tests full service health
-
-Workflow runs on:
-- Push to `main` or `develop` branches
-- Pull requests to `main` or `develop`
-
-## Docker Port Configuration & Conflict Resolution
-
-### Port Configuration Overview
-
-The StockPredictor project uses **environment variables** for all port mappings to prevent conflicts with existing services on your system. This allows multiple developers to run the service on different ports without modifying configuration files.
-
-**Default Ports:**
-- **PostgreSQL:** 5432 (configurable via `POSTGRES_PORT`)
-- **Redis:** 6379 (configurable via `REDIS_PORT`)
-- **FastAPI API:** 8000 (configurable via `API_PORT`)
-- **Celery Worker:** Internal only (no port exposed)
-- **Celery Beat:** Internal only (no port exposed)
-
-### Port Availability Check
-
-Before starting the services, run the port availability checker to detect conflicts:
+### Backend (242 tests)
 
 ```bash
-# Check if default ports are available
-./scripts/check-ports.sh
-
-# Or check specific ports
-./scripts/check-ports.sh 5433 6380 8001
+cd backend
+pytest -v                    # Run all tests
+pytest --cov=app            # With coverage report
+pytest -k "test_api"        # Run specific tests
 ```
 
-The script will report which ports are in use and suggest alternatives:
-
-```
-╔════════════════════════════════════════════════════════════════╗
-║         StockPredictor Port Availability Check                  ║
-╚════════════════════════════════════════════════════════════════╝
-
-Configuration:
-  PostgreSQL Port: 5432
-  Redis Port:      6379
-  API Port:        8000
-
-Port Availability:
-Checking PostgreSQL... ✓ Available (port 5432)
-Checking Redis... ✓ Available (port 6379)
-Checking FastAPI... ✓ Available (port 8000)
-
-✓ All ports are available!
-
-You can now start the services:
-  docker-compose up -d
-```
-
-### Port Conflict Resolution
-
-If ports are already in use on your system, follow these steps:
-
-#### Option 1: Using Alternative Ports (Recommended)
-
-Edit the `.env` file and change the port numbers:
-
-```env
-# .env
-POSTGRES_PORT=5433   # Was 5432
-REDIS_PORT=6380      # Was 6379
-API_PORT=8001        # Was 8000
-```
-
-Then restart the services:
+### Frontend
 
 ```bash
-docker-compose down
-docker-compose up -d
+cd frontend
+npm run build              # Type check and build
+npm test                   # Run Jest tests (if configured)
 ```
 
-#### Option 2: Using Override Command
+## Technical Indicators
 
-Set ports in the command line (overrides .env):
+The platform calculates these indicators client-side for real-time charting:
 
-```bash
-POSTGRES_PORT=5433 REDIS_PORT=6380 API_PORT=8001 docker-compose up -d
-```
+- **RSI (14)** - Relative Strength Index with overbought/oversold zones
+- **MACD (12, 26, 9)** - Moving Average Convergence Divergence with signal line
+- **SMA 20** - Simple Moving Average
+- **EMA 12** - Exponential Moving Average
 
-#### Option 3: Stop Conflicting Services
+## Development
 
-If you don't need the existing services, stop them:
+### Adding a New API Endpoint
 
-```bash
-# macOS / Linux
-lsof -i :5432   # Find what's using port 5432
-kill -9 <PID>   # Kill the process
+1. Create route in `backend/app/api/`
+2. Add Pydantic schemas in `backend/app/schemas.py`
+3. Register router in `backend/app/api/router.py`
+4. Write tests in `backend/tests/`
 
-# Or use the port checking script
-./scripts/check-ports.sh
-```
+### Adding a New Frontend Page
 
-### Diagnosing Port Conflicts
+1. Create page in `frontend/app/`
+2. Add components in `frontend/components/`
+3. Use React Query hooks for data fetching
 
-#### "Port X is already in use" Error
+## Deployment Checklist
 
-```bash
-# Find which process is using the port
-lsof -i :5432  # macOS
-# or
-netstat -tuln | grep 5432  # Linux
-
-# Output example:
-# postgres   123  user   10u  IPv4  0x12345678      0t0  TCP 127.0.0.1:5432 (LISTEN)
-```
-
-The output shows:
-- **Process:** `postgres` (the application using the port)
-- **PID:** `123` (process ID)
-- **Port:** `5432` (the port number)
-
-**Resolution:**
-- Stop the service: `sudo systemctl stop postgresql` or similar
-- Or change the port in `.env` and restart docker-compose
-
-#### "Container won't start" Error
-
-```bash
-# Check the Docker logs to see what's wrong
-docker-compose logs web
-docker-compose logs postgres
-docker-compose logs redis
-
-# Output might show:
-# ERROR: bind: address already in use
-```
-
-**Debug steps:**
-
-```bash
-# Verify port is actually in use
-docker ps | grep <container-name>
-
-# Try using alternative ports
-POSTGRES_PORT=5433 REDIS_PORT=6380 API_PORT=8001 docker-compose up -d
-
-# Check if services start successfully
-docker-compose ps
-```
-
-#### "Services can't communicate" Error
-
-If containers start but can't connect to each other, verify:
-
-```bash
-# Services use internal service names (not localhost)
-# Check docker network
-docker network ls
-docker network inspect stock-predictor-network
-
-# Verify connectivity from app container
-docker-compose exec web curl http://postgres:5432  # Should fail with connection error, not "unknown host"
-docker-compose exec web redis-cli -h redis ping   # Should respond with PONG
-```
-
-**Important:** Internal service communication uses service names (e.g., `postgres:5432`), not `localhost:5432`. This is configured automatically in the application environment variables.
-
-### Environment Variable Configuration
-
-All services use these environment variables from `.env`:
-
-```bash
-# Database
-POSTGRES_PORT=5432
-POSTGRES_USER=dev
-POSTGRES_PASSWORD=devpass
-POSTGRES_DB=stock_predictor
-
-# Redis
-REDIS_PORT=6379
-
-# FastAPI
-API_PORT=8000
-DEBUG=True
-
-# Connection URLs (built automatically)
-DATABASE_URL=postgresql://dev:devpass@postgres:5432/stock_predictor
-REDIS_URL=redis://redis:6379
-CELERY_BROKER_URL=redis://redis:6379/0
-```
-
-**Key Points:**
-- Port environment variables affect the host machine port mappings
-- Internal service names (postgres, redis, web) stay the same
-- Connection strings use service names internally (e.g., `postgres:5432`)
-- External access uses localhost with mapped ports (e.g., `localhost:5432`)
-
-### Examples
-
-**Scenario 1: PostgreSQL already running locally on 5432**
-
-```bash
-# Update .env
-echo "POSTGRES_PORT=5433" >> .env
-
-# Restart services
-docker-compose down
-docker-compose up -d
-
-# Verify
-docker ps | grep stock-predictor-db
-# Should show: 0.0.0.0:5433->5432/tcp
-```
-
-**Scenario 2: Check and fix all conflicts at once**
-
-```bash
-# Run port checker
-./scripts/check-ports.sh
-
-# If conflicts found, use suggested ports
-POSTGRES_PORT=5433 REDIS_PORT=6380 API_PORT=8001 docker-compose up -d
-
-# Verify all services are healthy
-docker-compose ps
-# Should show all containers with healthy status
-```
-
-**Scenario 3: Multiple developers with different ports**
-
-Each developer uses their own `.env` file:
-
-**Developer 1 (.env):**
-```env
-POSTGRES_PORT=5432
-REDIS_PORT=6379
-API_PORT=8000
-```
-
-**Developer 2 (.env):**
-```env
-POSTGRES_PORT=5433
-REDIS_PORT=6380
-API_PORT=8001
-```
-
-Both can run simultaneously without conflicts!
-
-## Troubleshooting
-
-### Services won't start
-```bash
-# Check service logs
-docker-compose logs postgres
-docker-compose logs redis
-docker-compose logs web
-
-# Verify port availability
-lsof -i :5432  # PostgreSQL
-lsof -i :6379  # Redis
-lsof -i :8000  # API
-```
-
-### Database connection errors
-```bash
-# Check PostgreSQL is healthy
-docker-compose exec postgres pg_isready -U dev
-
-# View database logs
-docker-compose logs postgres
-
-# Reset database
-docker-compose down -v  # Remove volumes
-docker-compose up -d postgres
-docker-compose exec web alembic upgrade head
-```
-
-### API not responding
-```bash
-# Check API logs
-docker-compose logs -f web
-
-# Test health endpoint
-curl http://localhost:8000/health
-
-# Check if port is in use
-lsof -i :8000
-```
-
-## Contributing
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes and test: `docker-compose exec web pytest`
-3. Run code quality checks: `docker-compose exec web black app/`
-4. Commit with clear message: `git commit -m "feat: description"`
-5. Push and create a pull request
-
-## Development Roadmap
-
-### Phase 1: Foundation ✅ (In Progress)
-- [x] Project Infrastructure
-- [x] Database Schema & Migrations
-- [ ] Data Fetchers (Yahoo Finance, NewsAPI)
-- [ ] Celery Background Tasks
-
-### Phase 2: API Endpoints (TBD)
-- Pydantic Schemas
-- RESTful endpoints for stock search, details, predictions
-
-### Phase 3: Analysis Engine (TBD)
-- Event categorization
-- Sentiment analysis
-- Correlation analysis
-- Predictability scoring
-
-### Phase 4: Frontend MVP (TBD)
-- Frontend setup with Next.js
-- Search and discovery page
-- Stock detail page with predictability card
-
-### Phase 5: Advanced Features (TBD)
-- Historical analysis page
-- Backtest builder and results
-- Watchlist and alerts
-
-### Phase 6: Polish & Deployment (TBD)
-- Error handling and validation
-- Rate limiting and caching
-- Monitoring and logging
-- Production deployment
+- [ ] Set secure `SECRET_KEY` in production
+- [ ] Configure production `DATABASE_URL`
+- [ ] Set up Redis for production
+- [ ] Add `NEWSAPI_KEY` to environment
+- [ ] Enable HTTPS
+- [ ] Configure CORS for your domain
 
 ## License
 
-Proprietary - StockPredictor
+MIT
 
-## Contact & Support
+## Contributing
 
-For issues, questions, or contributions, please create an issue in the repository.
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests (`pytest -v`)
+4. Commit changes (`git commit -m 'Add amazing feature'`)
+5. Push to branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ---
 
-**Last Updated:** January 3, 2026
-**Status:** Foundation Phase (In Progress)
-**Latest Version:** 0.1.0
+**Status:** All 5 phases complete | 242 backend tests passing | 11 frontend routes
