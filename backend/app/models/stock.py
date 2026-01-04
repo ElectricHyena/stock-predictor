@@ -33,6 +33,9 @@ class Stock(Base):
     prices = relationship("StockPrice", back_populates="stock", cascade="all, delete-orphan")
     news = relationship("NewsEvent", back_populates="stock", cascade="all, delete-orphan")
     correlations = relationship("EventPriceCorrelation", back_populates="stock", cascade="all, delete-orphan")
+    watchlist_items = relationship("WatchlistItem", back_populates="stock", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="stock", cascade="all, delete-orphan")
+    predictions = relationship("Prediction", back_populates="stock", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Stock(ticker={self.ticker}, market={self.market})>"

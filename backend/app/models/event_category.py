@@ -20,6 +20,7 @@ class EventCategory(Base):
     confidence = Column(Float)  # 0-1 confidence score for category assignment
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
         return f"<EventCategory(event_id={self.event_id}, category={self.category})>"

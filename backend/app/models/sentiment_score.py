@@ -18,6 +18,7 @@ class SentimentScore(Base):
     sentiment_score = Column(Float, nullable=False)  # -1.0 to 1.0
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
         return f"<SentimentScore(event_id={self.event_id}, score={self.sentiment_score})>"
