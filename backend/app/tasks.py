@@ -8,7 +8,7 @@ import os
 import time
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from celery.signals import task_prerun, task_postrun, task_failure, task_retry
 
@@ -17,6 +17,7 @@ from app.database import SessionLocal
 from app.models import Stock
 from app.services.data_fetchers import YahooFinanceFetcher
 from app.services.news_fetchers import NewsAPIFetcher
+from app.services.smart_data_manager import SmartDataManager, SyncType
 from app.exceptions import (
     APIError,
     NetworkError,
@@ -803,6 +804,330 @@ def check_alerts_task(self) -> Dict[str, any]:
 
     except Exception as e:
         logger.error(f"[{task_id}] Alert check error: {str(e)}", exc_info=True)
+        return {
+            "status": "failed",
+            "error": str(e),
+        }
+
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception as e:
+                logger.warning(f"[{task_id}] Error closing database: {str(e)}")
+
+
+# =============================================================================
+# INTELLIGENT DATA REFRESH TASKS
+# Scale-optimized tasks for incremental data updates
+# =============================================================================
+
+
+@celery_app.task(bind=True, name="app.tasks.append_daily_ohlcv_task")
+def append_daily_ohlcv_task(self) -> Dict[str, Any]:
+    """
+    Append today's final OHLCV candle for all tracked stocks.
+
+    Schedule: 4:30 PM IST (Mon-Fri) - 1 hour after NSE market close
+    Purpose: Finalize the day's price data without continuous polling
+
+    Returns:
+        Dict with status, stocks processed, and any errors
+    """
+    task_id = self.request.id or "manual"
+    logger.info(f"[{task_id}] Starting daily OHLCV append task")
+
+    db: Optional[Session] = None
+    results = {
+        "status": "success",
+        "stocks_processed": 0,
+        "stocks_updated": 0,
+        "stocks_failed": 0,
+        "errors": [],
+    }
+
+    try:
+        db = SessionLocal()
+
+        # Get all active stocks (NSE/BSE markets)
+        stocks = db.query(Stock).filter(
+            Stock.market.in_(["NSE", "BSE"]),
+            Stock.is_active == True,
+        ).all()
+
+        logger.info(f"[{task_id}] Found {len(stocks)} stocks to update")
+
+        for stock in stocks:
+            try:
+                results["stocks_processed"] += 1
+
+                # Fetch today's OHLCV data
+                fetcher = YahooFinanceFetcher(db)
+                today = datetime.now().date()
+
+                df = fetcher.fetch_ohlcv(
+                    stock.ticker,
+                    start_date=datetime.combine(today, datetime.min.time()),
+                    end_date=datetime.combine(today, datetime.max.time()),
+                )
+
+                if not df.empty:
+                    inserted, updated = fetcher.save_to_database(stock.ticker, df)
+                    if inserted > 0 or updated > 0:
+                        results["stocks_updated"] += 1
+                        logger.debug(
+                            f"[{task_id}] Updated {stock.ticker}: "
+                            f"{inserted} inserted, {updated} updated"
+                        )
+
+            except InvalidTickerError as e:
+                logger.warning(f"[{task_id}] Invalid ticker {stock.ticker}: {str(e)}")
+                results["stocks_failed"] += 1
+                results["errors"].append({"ticker": stock.ticker, "error": str(e)})
+
+            except Exception as e:
+                logger.error(f"[{task_id}] Error updating {stock.ticker}: {str(e)}")
+                results["stocks_failed"] += 1
+                results["errors"].append({"ticker": stock.ticker, "error": str(e)})
+
+        logger.info(
+            f"[{task_id}] Daily OHLCV append completed: "
+            f"processed={results['stocks_processed']}, "
+            f"updated={results['stocks_updated']}, "
+            f"failed={results['stocks_failed']}"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"[{task_id}] Daily OHLCV task error: {str(e)}", exc_info=True)
+        return {
+            "status": "failed",
+            "error": str(e),
+        }
+
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception as e:
+                logger.warning(f"[{task_id}] Error closing database: {str(e)}")
+
+
+@celery_app.task(bind=True, name="app.tasks.refresh_company_info_task")
+def refresh_company_info_task(self) -> Dict[str, Any]:
+    """
+    Refresh company info (metrics, ratios, sector) for all stocks.
+
+    Schedule: 6 AM IST daily - before market opens
+    Purpose: Update current metrics like P/E, ROE, ROCE, Market Cap
+
+    Returns:
+        Dict with status and update counts
+    """
+    task_id = self.request.id or "manual"
+    logger.info(f"[{task_id}] Starting company info refresh task")
+
+    db: Optional[Session] = None
+    results = {
+        "status": "success",
+        "stocks_processed": 0,
+        "stocks_updated": 0,
+        "stocks_failed": 0,
+        "errors": [],
+    }
+
+    try:
+        db = SessionLocal()
+
+        # Get all active stocks
+        stocks = db.query(Stock).filter(Stock.is_active == True).all()
+
+        logger.info(f"[{task_id}] Found {len(stocks)} stocks for info refresh")
+
+        for stock in stocks:
+            try:
+                results["stocks_processed"] += 1
+
+                # Use SmartDataManager for info-only sync
+                # This updates metrics without re-fetching all historical data
+                manager = SmartDataManager(db)
+                sync_result = manager.sync_stock(stock.ticker, sync_type=SyncType.PRICE_ONLY)
+
+                if sync_result.get("status") == "success":
+                    results["stocks_updated"] += 1
+
+            except Exception as e:
+                logger.error(f"[{task_id}] Error refreshing {stock.ticker}: {str(e)}")
+                results["stocks_failed"] += 1
+                results["errors"].append({"ticker": stock.ticker, "error": str(e)})
+
+        logger.info(
+            f"[{task_id}] Company info refresh completed: "
+            f"processed={results['stocks_processed']}, "
+            f"updated={results['stocks_updated']}, "
+            f"failed={results['stocks_failed']}"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"[{task_id}] Company info refresh error: {str(e)}", exc_info=True)
+        return {
+            "status": "failed",
+            "error": str(e),
+        }
+
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception as e:
+                logger.warning(f"[{task_id}] Error closing database: {str(e)}")
+
+
+@celery_app.task(bind=True, name="app.tasks.weekly_quarterly_sync_task")
+def weekly_quarterly_sync_task(self) -> Dict[str, Any]:
+    """
+    Check for and fetch new quarterly financial results.
+
+    Schedule: Sunday 2 AM IST
+    Purpose: Incrementally sync new quarterly data (not all 13 quarters)
+
+    Returns:
+        Dict with status, stocks checked, and quarters fetched
+    """
+    task_id = self.request.id or "manual"
+    logger.info(f"[{task_id}] Starting weekly quarterly sync task")
+
+    db: Optional[Session] = None
+    results = {
+        "status": "success",
+        "stocks_checked": 0,
+        "stocks_with_new_data": 0,
+        "new_quarters_fetched": 0,
+        "errors": [],
+    }
+
+    try:
+        db = SessionLocal()
+
+        # Get all active stocks
+        stocks = db.query(Stock).filter(Stock.is_active == True).all()
+
+        logger.info(f"[{task_id}] Checking {len(stocks)} stocks for new quarterly data")
+
+        for stock in stocks:
+            try:
+                results["stocks_checked"] += 1
+
+                # Use SmartDataManager with QUARTERLY sync type
+                manager = SmartDataManager(db)
+                sync_result = manager.sync_stock(stock.ticker, sync_type=SyncType.QUARTERLY)
+
+                if sync_result.get("status") == "success":
+                    quarterly_data = sync_result.get("quarterly_results", {})
+                    if quarterly_data.get("new_quarters", 0) > 0:
+                        results["stocks_with_new_data"] += 1
+                        results["new_quarters_fetched"] += quarterly_data["new_quarters"]
+                        logger.info(
+                            f"[{task_id}] {stock.ticker}: "
+                            f"Found {quarterly_data['new_quarters']} new quarters"
+                        )
+
+            except Exception as e:
+                logger.error(f"[{task_id}] Error syncing {stock.ticker}: {str(e)}")
+                results["errors"].append({"ticker": stock.ticker, "error": str(e)})
+
+        logger.info(
+            f"[{task_id}] Weekly quarterly sync completed: "
+            f"checked={results['stocks_checked']}, "
+            f"with_new_data={results['stocks_with_new_data']}, "
+            f"new_quarters={results['new_quarters_fetched']}"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"[{task_id}] Weekly quarterly sync error: {str(e)}", exc_info=True)
+        return {
+            "status": "failed",
+            "error": str(e),
+        }
+
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception as e:
+                logger.warning(f"[{task_id}] Error closing database: {str(e)}")
+
+
+@celery_app.task(bind=True, name="app.tasks.monthly_annual_sync_task")
+def monthly_annual_sync_task(self) -> Dict[str, Any]:
+    """
+    Check for and fetch new annual financial reports.
+
+    Schedule: 1st of month, 3 AM IST
+    Purpose: Incrementally sync new annual data (P&L, balance sheet, cash flow)
+
+    Returns:
+        Dict with status, stocks checked, and new annual data count
+    """
+    task_id = self.request.id or "manual"
+    logger.info(f"[{task_id}] Starting monthly annual sync task")
+
+    db: Optional[Session] = None
+    results = {
+        "status": "success",
+        "stocks_checked": 0,
+        "stocks_with_new_data": 0,
+        "new_annual_reports": 0,
+        "errors": [],
+    }
+
+    try:
+        db = SessionLocal()
+
+        # Get all active stocks
+        stocks = db.query(Stock).filter(Stock.is_active == True).all()
+
+        logger.info(f"[{task_id}] Checking {len(stocks)} stocks for new annual data")
+
+        for stock in stocks:
+            try:
+                results["stocks_checked"] += 1
+
+                # Use SmartDataManager with FULL sync for annual data
+                # This checks if new annual reports are available
+                manager = SmartDataManager(db)
+                sync_result = manager.sync_stock(stock.ticker, sync_type=SyncType.FULL)
+
+                if sync_result.get("status") == "success":
+                    annual_data = sync_result.get("annual_results", {})
+                    if annual_data.get("new_years", 0) > 0:
+                        results["stocks_with_new_data"] += 1
+                        results["new_annual_reports"] += annual_data["new_years"]
+                        logger.info(
+                            f"[{task_id}] {stock.ticker}: "
+                            f"Found {annual_data['new_years']} new annual reports"
+                        )
+
+            except Exception as e:
+                logger.error(f"[{task_id}] Error syncing {stock.ticker}: {str(e)}")
+                results["errors"].append({"ticker": stock.ticker, "error": str(e)})
+
+        logger.info(
+            f"[{task_id}] Monthly annual sync completed: "
+            f"checked={results['stocks_checked']}, "
+            f"with_new_data={results['stocks_with_new_data']}, "
+            f"new_reports={results['new_annual_reports']}"
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error(f"[{task_id}] Monthly annual sync error: {str(e)}", exc_info=True)
         return {
             "status": "failed",
             "error": str(e),

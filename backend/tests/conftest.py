@@ -42,8 +42,22 @@ def client(db: Session):
     """Create test client with overridden dependencies"""
     app.dependency_overrides[get_db] = override_get_db
 
+    # Clear cache before each test to ensure test isolation
+    try:
+        from app.cache import cache
+        cache.clear()
+    except Exception:
+        pass  # Cache may not be available in all test environments
+
     with TestClient(app) as test_client:
         yield test_client
+
+    # Clear cache after test as well
+    try:
+        from app.cache import cache
+        cache.clear()
+    except Exception:
+        pass
 
     app.dependency_overrides.clear()
 

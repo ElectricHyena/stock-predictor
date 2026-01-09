@@ -64,6 +64,14 @@ class RedisCache:
         except Exception as e:
             logger.error(f"Cache clear error for pattern {pattern}: {e}")
 
+    def clear(self):
+        """Clear all cache keys (useful for testing)"""
+        try:
+            self.client.flushdb()
+            logger.debug("Cleared all cache keys")
+        except Exception as e:
+            logger.error(f"Cache clear error: {e}")
+
 
 # Global cache instance
 cache = RedisCache()
