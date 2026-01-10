@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Predictor - System Architecture</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #059669;
+            --accent: #f59e0b;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+
+        .section h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .section h3 {
+            color: var(--text);
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .card {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+
+        .card h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-primary { background: #dbeafe; color: var(--primary); }
+        .badge-success { background: #d1fae5; color: var(--secondary); }
+        .badge-warning { background: #fef3c7; color: #b45309; }
+        .badge-danger { background: #fee2e2; color: var(--danger); }
+
+        .flow-diagram {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 2rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .flow-diagram pre {
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg);
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        tr:hover {
+            background: var(--bg);
+        }
+
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+            color: var(--primary-dark);
+        }
+
+        .code-block {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .code-block code {
+            background: none;
+            color: #e2e8f0;
+            padding: 0;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #fef3c7 0%, #fef3c7 100%);
+            padding: 0.1rem 0.3rem;
+            border-radius: 2px;
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .icon {
+            font-size: 1.2rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+            margin: 1rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.6rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid white;
+        }
+
+        .timeline-item h4 {
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-item p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .nav-toc {
+            position: sticky;
+            top: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .nav-toc ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .nav-toc li {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-toc a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .nav-toc a:hover {
+            color: var(--primary);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+            .nav-toc {
+                position: static;
+            }
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-dot.green { background: var(--secondary); }
+        .status-dot.yellow { background: var(--accent); }
+        .status-dot.red { background: var(--danger); }
+
+        .diagram-box {
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            background: white;
+        }
+
+        .arrow-down {
+            text-align: center;
+            color: var(--primary);
+            font-size: 1.5rem;
+            padding: 0.5rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Stock Predictor System Architecture</h1>
+            <p>Comprehensive guide to understanding how the platform works</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="two-column">
+            <aside>
+                <nav class="nav-toc">
+                    <h4 style="margin-bottom: 1rem; color: var(--text);">Contents</h4>
+                    <ul>
+                        <li><a href="#overview">1. System Overview</a></li>
+                        <li><a href="#tech-stack">2. Technology Stack</a></li>
+                        <li><a href="#data-flow">3. Data Flow</a></li>
+                        <li><a href="#adding-stocks">4. Adding Stocks</a></li>
+                        <li><a href="#data-sources">5. Data Sources</a></li>
+                        <li><a href="#refresh-strategy">6. Refresh Strategy</a></li>
+                        <li><a href="#database-schema">7. Database Schema</a></li>
+                        <li><a href="#api-endpoints">8. API Endpoints</a></li>
+                        <li><a href="#frontend">9. Frontend</a></li>
+                        <li><a href="#celery-tasks">10. Background Tasks</a></li>
+                        <li><a href="#caching">11. Caching Strategy</a></li>
+                        <li><a href="#decisions">12. Key Decisions</a></li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <main>
+                <!-- Section 1: Overview -->
+                <section id="overview" class="section">
+                    <h2>1. System Overview</h2>
+                    <p>Stock Predictor is a full-stack platform for analyzing Indian stocks (NSE/BSE) to identify predictable patterns and provide insights. The system:</p>
+
+                    <div class="grid" style="margin-top: 1.5rem;">
+                        <div class="card">
+                            <h4>📊 Collects Data</h4>
+                            <p>Fetches historical prices, financials, news, and company info from multiple sources automatically.</p>
+                        </div>
+                        <div class="card">
+                            <h4>💾 Stores Locally</h4>
+                            <p>All data is persisted in PostgreSQL. Once fetched, data is served from the database - not re-fetched on every request.</p>
+                        </div>
+                        <div class="card">
+                            <h4>🔄 Updates Intelligently</h4>
+                            <p>Different data types refresh at different frequencies based on how often they actually change.</p>
+                        </div>
+                        <div class="card">
+                            <h4>📱 Displays Insights</h4>
+                            <p>Next.js frontend shows stock details, charts, financials, and analysis in a clean dashboard.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Tech Stack -->
+                <section id="tech-stack" class="section">
+                    <h2>2. Technology Stack</h2>
+
+                    <div class="grid">
+                        <div>
+                            <h3>Backend</h3>
+                            <table>
+                                <tr><td><strong>FastAPI</strong></td><td>Python web framework (async)</td></tr>
+                                <tr><td><strong>PostgreSQL</strong></td><td>Primary database</td></tr>
+                                <tr><td><strong>Redis</strong></td><td>Caching & Celery broker</td></tr>
+                                <tr><td><strong>Celery</strong></td><td>Background task processing</td></tr>
+                                <tr><td><strong>SQLAlchemy</strong></td><td>ORM for database</td></tr>
+                                <tr><td><strong>Alembic</strong></td><td>Database migrations</td></tr>
+                            </table>
+                        </div>
+                        <div>
+                            <h3>Frontend</h3>
+                            <table>
+                                <tr><td><strong>Next.js 14</strong></td><td>React framework</td></tr>
+                                <tr><td><strong>TypeScript</strong></td><td>Type-safe JavaScript</td></tr>
+                                <tr><td><strong>TailwindCSS</strong></td><td>Utility CSS framework</td></tr>
+                                <tr><td><strong>Recharts</strong></td><td>Chart library</td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <h3>Infrastructure</h3>
+                    <div class="code-block">
+                        <code>
+docker-compose.yml services:
+├── postgres     (port 7002) - Database
+├── redis        (port 7003) - Cache & Message Broker
+├── web          (port 7001) - FastAPI Backend
+├── celery_worker            - Background Task Processor
+├── celery_beat              - Task Scheduler
+└── frontend     (port 7004) - Next.js Frontend
+                        </code>
+                    </div>
+                </section>
+
+                <!-- Section 3: Data Flow -->
+                <section id="data-flow" class="section">
+                    <h2>3. Data Flow</h2>
+                    <p>Understanding how data moves through the system:</p>
+
+                    <div class="flow-diagram">
+                        <pre>
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              DATA SOURCES (External)                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐            │
+│   │  Screener.in    │    │  Yahoo Finance  │    │    NewsAPI      │            │
+│   │  (Primary)      │    │  (Prices)       │    │  (News)         │            │
+│   └────────┬────────┘    └────────┬────────┘    └────────┬────────┘            │
+│            │                      │                      │                      │
+│            ▼                      ▼                      ▼                      │
+│   ┌─────────────────────────────────────────────────────────────────┐          │
+│   │                    DATA FETCHER SERVICES                         │          │
+│   │  ScreenerScraper │ YahooFinanceFetcher │ NewsAPIFetcher         │          │
+│   └─────────────────────────────────────────────────────────────────┘          │
+│                                    │                                            │
+└────────────────────────────────────┼────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           SmartDataManager                                       │
+│  Orchestrates sync operations, determines what needs refreshing                  │
+│  Methods: full_sync(), price_sync(), quarterly_sync(), annual_sync()            │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           PostgreSQL Database                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  stocks          │ stock_prices    │ stock_financials  │ news_events           │
+│  stock_info      │ stock_cashflow  │ stock_ratios      │ stock_shareholding    │
+│  stock_balance_sheet              │ stock_sync_status  │ predictability_scores │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              Redis Cache                                         │
+│  Caches API responses for 5-30 minutes to reduce database load                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           FastAPI Endpoints                                      │
+│  /api/stocks/search  │ /api/stocks/{ticker}  │ /api/stocks/{ticker}/prices     │
+│  /api/stocks/add     │ /api/stocks/{ticker}/financials                         │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           Next.js Frontend                                       │
+│  /search             │ /dashboard/{ticker}                                      │
+│  Stock cards, charts, financial tables, analysis                                │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                        </pre>
+                    </div>
+                </section>
+
+                <!-- Section 4: Adding Stocks -->
+                <section id="adding-stocks" class="section">
+                    <h2>4. Adding Stocks to the System</h2>
+                    <p>The system is <span class="highlight">fully generic</span> - no hardcoded stock tickers. Any stock can be added and will be automatically processed.</p>
+
+                    <h3>Method 1: Explicit Add (Recommended)</h3>
+                    <div class="code-block">
+                        <code>
+POST /api/stocks/add
+Content-Type: application/json
+
+{
+    "symbol": "RELIANCE",
+    "market": "NSE"
+}
+
+Response:
+{
+    "ticker": "RELIANCE.NS",
+    "company_name": "Reliance Industries Ltd",
+    "status": "Stock added successfully",
+    "sync_result": { ... }
+}
+                        </code>
+                    </div>
+
+                    <h3>Method 2: Auto-Creation on Access</h3>
+                    <div class="code-block">
+                        <code>
+GET /api/stocks/NEWSTOCK.NS
+
+If stock doesn't exist:
+1. Creates Stock record with status="PENDING"
+2. Triggers async background fetch
+3. Returns basic info immediately
+4. Data populates over next few seconds
+                        </code>
+                    </div>
+
+                    <h3>What Happens After Adding a Stock?</h3>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <h4>Immediate: Full Sync</h4>
+                            <p>SmartDataManager.full_sync() fetches ALL data from Screener.in - company info, 13+ quarters of financials, 12+ years of annual data, shareholding patterns, and ratios.</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4>Immediate: Price History</h4>
+                            <p>YahooFinanceFetcher fetches 1 year of daily OHLCV (Open, High, Low, Close, Volume) data.</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4>Every 30 minutes: News</h4>
+                            <p>NewsAPIFetcher searches for recent news articles about the company.</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4>Scheduled: Ongoing Updates</h4>
+                            <p>Celery Beat schedules automatic refreshes (see Refresh Strategy section).</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 5: Data Sources -->
+                <section id="data-sources" class="section">
+                    <h2>5. Data Sources</h2>
+
+                    <div class="grid">
+                        <div class="card">
+                            <h4><span class="badge badge-primary">PRIMARY</span> Screener.in</h4>
+                            <p><strong>What it provides:</strong></p>
+                            <ul>
+                                <li>Company info (name, sector, industry)</li>
+                                <li>Key metrics (P/E, P/B, ROE, ROCE, Market Cap)</li>
+                                <li>Quarterly results (13+ quarters)</li>
+                                <li>Annual P&L (12+ years)</li>
+                                <li>Balance sheets</li>
+                                <li>Cash flow statements</li>
+                                <li>Financial ratios over time</li>
+                                <li>Shareholding patterns</li>
+                            </ul>
+                            <p style="margin-top: 1rem;"><strong>Rate limiting:</strong> 2.5-5 second delays between requests</p>
+                        </div>
+
+                        <div class="card">
+                            <h4><span class="badge badge-success">PRICES</span> Yahoo Finance</h4>
+                            <p><strong>What it provides:</strong></p>
+                            <ul>
+                                <li>Historical OHLCV data (up to 5 years)</li>
+                                <li>Current price and day's movement</li>
+                                <li>52-week high/low</li>
+                                <li>Volume data</li>
+                            </ul>
+                            <p style="margin-top: 1rem;"><strong>Rate limiting:</strong> 5 requests per second</p>
+                        </div>
+
+                        <div class="card">
+                            <h4><span class="badge badge-warning">NEWS</span> NewsAPI</h4>
+                            <p><strong>What it provides:</strong></p>
+                            <ul>
+                                <li>Recent news articles</li>
+                                <li>Headlines and descriptions</li>
+                                <li>Source and publish date</li>
+                                <li>Sentiment analysis (computed locally)</li>
+                            </ul>
+                            <p style="margin-top: 1rem;"><strong>Free tier:</strong> 100 requests/day</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 6: Refresh Strategy -->
+                <section id="refresh-strategy" class="section">
+                    <h2>6. Intelligent Refresh Strategy</h2>
+                    <p>Different data types change at different frequencies. The system refreshes each type appropriately:</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data Type</th>
+                                <th>Refresh Schedule</th>
+                                <th>Celery Task</th>
+                                <th>Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Current Prices</strong></td>
+                                <td>Hourly (9AM-3PM IST, Mon-Fri)</td>
+                                <td><code>fetch_stock_prices_task</code></td>
+                                <td>Only during market hours; hourly is enough for analysis</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Daily OHLCV</strong></td>
+                                <td>4:30 PM IST (Mon-Fri)</td>
+                                <td><code>append_daily_ohlcv_task</code></td>
+                                <td>Append final candle after market close</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Company Info</strong></td>
+                                <td>6:00 AM IST Daily</td>
+                                <td><code>refresh_company_info_task</code></td>
+                                <td>Metrics like P/E can change daily</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Quarterly Financials</strong></td>
+                                <td>Sunday 2:00 AM</td>
+                                <td><code>weekly_quarterly_sync_task</code></td>
+                                <td>Quarterly results release ~4x per year</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Annual Financials</strong></td>
+                                <td>1st of month, 3:00 AM</td>
+                                <td><code>monthly_annual_sync_task</code></td>
+                                <td>Annual reports release once per year</td>
+                            </tr>
+                            <tr>
+                                <td><strong>News Articles</strong></td>
+                                <td>Every 30 minutes</td>
+                                <td><code>fetch_news_task</code></td>
+                                <td>News is time-sensitive</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Correlations</strong></td>
+                                <td>Sunday 2:30 AM</td>
+                                <td><code>regenerate_correlations_task</code></td>
+                                <td>Weekly recalculation after new data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Why This Strategy?</h3>
+                    <div class="grid">
+                        <div class="card">
+                            <h4>🚀 Scalability</h4>
+                            <p>Hourly price updates (not 5-minute) allows tracking 1000s of stocks without overwhelming APIs.</p>
+                        </div>
+                        <div class="card">
+                            <h4>💰 Cost Efficiency</h4>
+                            <p>Reduces API calls by ~90% compared to aggressive polling.</p>
+                        </div>
+                        <div class="card">
+                            <h4>📊 Data Freshness</h4>
+                            <p>Each data type refreshes at a frequency that matches how often it actually changes.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 7: Database Schema -->
+                <section id="database-schema" class="section">
+                    <h2>7. Database Schema</h2>
+
+                    <div class="flow-diagram">
+                        <pre>
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                 CORE TABLES                                      │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│       stocks        │     │    stock_prices     │     │    stock_info       │
+├─────────────────────┤     ├─────────────────────┤     ├─────────────────────┤
+│ id (PK)             │──┐  │ id (PK)             │     │ id (PK)             │
+│ ticker (unique)     │  │  │ stock_id (FK)    ───┼──┐  │ stock_id (FK)    ───┼──┐
+│ company_name        │  │  │ date                │  │  │ current_price       │  │
+│ market (NSE/BSE)    │  │  │ open_price          │  │  │ market_cap          │  │
+│ sector              │  │  │ high_price          │  │  │ pe_ratio            │  │
+│ industry            │  │  │ low_price           │  │  │ pb_ratio            │  │
+│ is_active           │  │  │ close_price         │  │  │ roe, roce           │  │
+│ analysis_status     │  │  │ volume              │  │  │ 52w_high, 52w_low   │  │
+│ created_at          │  │  │ daily_return_pct    │  │  │ face_value          │  │
+└─────────────────────┘  │  └─────────────────────┘  │  └─────────────────────┘  │
+                         │                           │                           │
+                         └───────────────────────────┴───────────────────────────┘
+                                                     │
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              FINANCIAL TABLES                                    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│  stock_financials   │     │   stock_cashflow    │     │ stock_balance_sheet │
+├─────────────────────┤     ├─────────────────────┤     ├─────────────────────┤
+│ stock_id (FK)       │     │ stock_id (FK)       │     │ stock_id (FK)       │
+│ period_type         │     │ period_type         │     │ period_type         │
+│ (quarterly/annual)  │     │ period_end          │     │ period_end          │
+│ period_end          │     │ operating_cashflow  │     │ total_assets        │
+│ revenue             │     │ investing_cashflow  │     │ total_liabilities   │
+│ operating_profit    │     │ financing_cashflow  │     │ total_equity        │
+│ net_profit          │     │ net_cashflow        │     │ total_debt          │
+│ eps                 │     └─────────────────────┘     │ share_capital       │
+└─────────────────────┘                                 └─────────────────────┘
+
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│    stock_ratios     │     │ stock_shareholding  │     │  stock_sync_status  │
+├─────────────────────┤     ├─────────────────────┤     ├─────────────────────┤
+│ stock_id (FK)       │     │ stock_id (FK)       │     │ stock_id (FK)       │
+│ period_end          │     │ period_end          │     │ last_full_sync      │
+│ roe, roce           │     │ promoter_holding    │     │ last_price_sync     │
+│ pe_ratio, pb_ratio  │     │ fii_holding         │     │ last_quarterly_sync │
+│ debt_to_equity      │     │ dii_holding         │     │ latest_quarter_end  │
+│ current_ratio       │     │ public_holding      │     │ quarters_available  │
+│ debtor_days         │     │ government_holding  │     │ years_available     │
+└─────────────────────┘     └─────────────────────┘     └─────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              ANALYSIS TABLES                                     │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────┐     ┌─────────────────────────┐
+│    news_events      │     │ predictability_scores   │
+├─────────────────────┤     ├─────────────────────────┤
+│ stock_id (FK)       │     │ stock_id (FK)           │
+│ headline            │     │ overall_score (0-100)   │
+│ event_date          │     │ information_score       │
+│ event_category      │     │ pattern_score           │
+│ sentiment_score     │     │ timing_score            │
+│ content_hash        │     │ direction_score         │
+└─────────────────────┘     └─────────────────────────┘
+                        </pre>
+                    </div>
+                </section>
+
+                <!-- Section 8: API Endpoints -->
+                <section id="api-endpoints" class="section">
+                    <h2>8. API Endpoints</h2>
+
+                    <h3>Stock Management</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge badge-success">POST</span></td>
+                                <td><code>/api/stocks/add</code></td>
+                                <td>Add a new stock to tracking</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/search?q=...</code></td>
+                                <td>Search stocks by ticker or name</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/{ticker}</code></td>
+                                <td>Get stock details (auto-creates if missing)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Data Endpoints</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Endpoint</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/{ticker}/prices</code></td>
+                                <td>Historical price data</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/{ticker}/financials</code></td>
+                                <td>All financial data (quarterly, annual, ratios)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/{ticker}/predictability-score</code></td>
+                                <td>Predictability analysis</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/{ticker}/prediction</code></td>
+                                <td>Price movement prediction</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">GET</span></td>
+                                <td><code>/api/stocks/{ticker}/analysis</code></td>
+                                <td>Historical event analysis</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Example Response: Stock Details</h3>
+                    <div class="code-block">
+                        <code>
+GET /api/stocks/TCS.NS
+
+{
+    "ticker": "TCS.NS",
+    "company_name": "Tata Consultancy Services Limited",
+    "market": "NSE",
+    "sector": "Information Technology",
+    "current_price": 4125.50,
+    "info": {
+        "market_cap": 15234567890000,
+        "pe_ratio": 32.5,
+        "pb_ratio": 14.2,
+        "roe": 48.5,
+        "roce": 62.3,
+        "face_value": 1.0,
+        "fifty_two_week_high": 4500.00,
+        "fifty_two_week_low": 3200.00
+    },
+    "price_history": [...],
+    "recent_news": [...]
+}
+                        </code>
+                    </div>
+                </section>
+
+                <!-- Section 9: Frontend -->
+                <section id="frontend" class="section">
+                    <h2>9. Frontend Architecture</h2>
+
+                    <h3>Pages</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Route</th>
+                                <th>Component</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/</code></td>
+                                <td>Home</td>
+                                <td>Landing page</td>
+                            </tr>
+                            <tr>
+                                <td><code>/search</code></td>
+                                <td>SearchPage</td>
+                                <td>Search and add stocks</td>
+                            </tr>
+                            <tr>
+                                <td><code>/dashboard/{ticker}</code></td>
+                                <td>DashboardPage</td>
+                                <td>Stock detail view with all data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Dashboard Components</h3>
+                    <div class="grid">
+                        <div class="card">
+                            <h4>StockOverview</h4>
+                            <p>Displays key metrics: P/E, P/B, ROE, ROCE, Market Cap, 52W High/Low, Face Value</p>
+                        </div>
+                        <div class="card">
+                            <h4>PriceChart</h4>
+                            <p>Interactive candlestick/line chart with 1M, 3M, 6M, 1Y, 5Y timeframes</p>
+                        </div>
+                        <div class="card">
+                            <h4>FinancialTables</h4>
+                            <p>Tabbed view: Quarterly Results, Annual P&L, Cash Flow, Balance Sheet, Ratios, Shareholding</p>
+                        </div>
+                        <div class="card">
+                            <h4>PriceHeader</h4>
+                            <p>Current price, day change, company name and ticker</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 10: Celery Tasks -->
+                <section id="celery-tasks" class="section">
+                    <h2>10. Background Tasks (Celery)</h2>
+
+                    <h3>How Tasks Work</h3>
+                    <div class="flow-diagram">
+                        <pre>
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│    Celery Beat      │     │       Redis         │     │   Celery Worker     │
+│  (Scheduler)        │────▶│  (Message Broker)   │────▶│  (Task Executor)    │
+│                     │     │                     │     │                     │
+│ Reads schedule from │     │ Queues:             │     │ Processes tasks     │
+│ celery_beat_schedule│     │ - stocks            │     │ from queues         │
+│ Triggers tasks at   │     │ - news              │     │ Runs fetchers       │
+│ defined times       │     │ - analysis          │     │ Updates database    │
+└─────────────────────┘     │ - default           │     └─────────────────────┘
+                            └─────────────────────┘
+                        </pre>
+                    </div>
+
+                    <h3>Task Discovery Pattern</h3>
+                    <p>All tasks dynamically discover stocks from the database:</p>
+                    <div class="code-block">
+                        <code>
+# Pattern used in every scheduled task:
+
+def some_scheduled_task():
+    db = SessionLocal()
+
+    # Get ALL active stocks from database
+    stocks = db.query(Stock).filter(Stock.is_active == True).all()
+
+    # Process each stock
+    for stock in stocks:
+        # Fetch/update data for this stock
+        process_stock(stock.ticker)
+
+    db.close()
+                        </code>
+                    </div>
+
+                    <p><strong>Key point:</strong> No hardcoded stock lists. Add a stock to the database, and it automatically gets processed by all scheduled tasks.</p>
+                </section>
+
+                <!-- Section 11: Caching -->
+                <section id="caching" class="section">
+                    <h2>11. Caching Strategy</h2>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cache Key Pattern</th>
+                                <th>TTL</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>search:{query}</code></td>
+                                <td>5 minutes</td>
+                                <td>Search results</td>
+                            </tr>
+                            <tr>
+                                <td><code>detail:{ticker}</code></td>
+                                <td>10 minutes</td>
+                                <td>Stock detail page</td>
+                            </tr>
+                            <tr>
+                                <td><code>predictability:{ticker}</code></td>
+                                <td>30 minutes</td>
+                                <td>Predictability scores</td>
+                            </tr>
+                            <tr>
+                                <td><code>prediction:{ticker}</code></td>
+                                <td>1 hour</td>
+                                <td>Price predictions</td>
+                            </tr>
+                            <tr>
+                                <td><code>analysis:{ticker}:{period}</code></td>
+                                <td>1 hour</td>
+                                <td>Historical analysis</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Cache Flow</h3>
+                    <div class="code-block">
+                        <code>
+Request → Check Redis Cache
+              │
+              ├── Cache HIT  → Return cached data (fast!)
+              │
+              └── Cache MISS → Query PostgreSQL
+                                    │
+                                    └── Store in Redis with TTL
+                                          │
+                                          └── Return data
+                        </code>
+                    </div>
+                </section>
+
+                <!-- Section 12: Key Decisions -->
+                <section id="decisions" class="section">
+                    <h2>12. Key Design Decisions</h2>
+
+                    <div class="grid">
+                        <div class="card">
+                            <h4>💾 Database-First Architecture</h4>
+                            <p><strong>Decision:</strong> All data is persisted locally in PostgreSQL.</p>
+                            <p><strong>Why:</strong> Reduces API calls, enables offline analysis, provides data ownership.</p>
+                        </div>
+
+                        <div class="card">
+                            <h4>⏱️ Intelligent Refresh</h4>
+                            <p><strong>Decision:</strong> Different refresh rates for different data types.</p>
+                            <p><strong>Why:</strong> Quarterly financials don't need hourly updates. This allows scaling to 1000s of stocks.</p>
+                        </div>
+
+                        <div class="card">
+                            <h4>🔄 Generic Stock Handling</h4>
+                            <p><strong>Decision:</strong> No hardcoded stock tickers anywhere.</p>
+                            <p><strong>Why:</strong> Add any stock and it automatically gets processed by all systems.</p>
+                        </div>
+
+                        <div class="card">
+                            <h4>📊 Multiple Data Sources</h4>
+                            <p><strong>Decision:</strong> Screener.in (primary) + Yahoo Finance (prices) + NewsAPI (news).</p>
+                            <p><strong>Why:</strong> Each source excels at different data types. Screener.in has best Indian financial data.</p>
+                        </div>
+
+                        <div class="card">
+                            <h4>🕐 Market-Hours Awareness</h4>
+                            <p><strong>Decision:</strong> Price tasks only run during market hours (9AM-3PM IST, Mon-Fri).</p>
+                            <p><strong>Why:</strong> No point fetching prices when market is closed.</p>
+                        </div>
+
+                        <div class="card">
+                            <h4>📦 Incremental Syncs</h4>
+                            <p><strong>Decision:</strong> Only fetch NEW data, not re-fetch everything.</p>
+                            <p><strong>Why:</strong> Weekly quarterly sync only fetches quarters newer than what we have.</p>
+                        </div>
+                    </div>
+
+                    <h3>Trade-offs Made</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trade-off</th>
+                                <th>Chose</th>
+                                <th>Over</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Refresh Frequency</td>
+                                <td>Hourly prices</td>
+                                <td>5-minute prices</td>
+                                <td>Scalability for 1000s of stocks</td>
+                            </tr>
+                            <tr>
+                                <td>Data Source</td>
+                                <td>Web scraping</td>
+                                <td>Paid APIs</td>
+                                <td>Cost efficiency, comprehensive data</td>
+                            </tr>
+                            <tr>
+                                <td>Architecture</td>
+                                <td>Monolithic backend</td>
+                                <td>Microservices</td>
+                                <td>Simplicity for current scale</td>
+                            </tr>
+                            <tr>
+                                <td>Real-time</td>
+                                <td>Near real-time (hourly)</td>
+                                <td>WebSocket streaming</td>
+                                <td>Focus on analysis, not trading</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Quick Reference -->
+                <section class="section" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                    <h2>Quick Reference</h2>
+
+                    <div class="grid">
+                        <div>
+                            <h3>URLs</h3>
+                            <ul>
+                                <li>Frontend: <code>http://localhost:7004</code></li>
+                                <li>Backend API: <code>http://localhost:7001</code></li>
+                                <li>API Docs: <code>http://localhost:7001/docs</code></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Common Commands</h3>
+                            <div class="code-block">
+                                <code>
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f web
+
+# Run migrations
+docker compose exec web alembic upgrade head
+
+# Run tests
+docker compose exec web pytest tests/
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <footer style="background: #1e293b; color: white; padding: 2rem; text-align: center; margin-top: 2rem;">
+        <p>Stock Predictor System Documentation</p>
+        <p style="opacity: 0.7; font-size: 0.9rem;">Generated January 2026</p>
+    </footer>
+</body>
+</html>
