@@ -1,6 +1,6 @@
 """Stock Model"""
 
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -20,6 +20,7 @@ class Stock(Base):
     industry = Column(String(100))
     website = Column(String(255))
     description = Column(Text)
+    is_active = Column(Boolean, default=True, index=True)  # For enabling/disabling stock tracking
 
     # Data freshness tracking
     last_price_updated_at = Column(DateTime)
