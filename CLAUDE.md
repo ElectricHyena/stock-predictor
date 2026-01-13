@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - DevOps: Docker Compose, GitHub Actions CI/CD
 - Testing: pytest with coverage (80% minimum)
 
-**Current Phase:** Foundation (Phase 1) - Infrastructure and database complete; data fetchers and Celery tasks in progress.
+**Current Phase:** Phase 1.5 Complete - Infrastructure, database, data fetchers, and intelligent refresh strategy implemented. Frontend MVP functional.
 
 ## Key Architecture
 
@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The database contains 5 core tables with a precise schema design:
 
-- **stocks**: Master table (ticker PK, company_name, market, sector, industry)
+- **stocks**: Master table (ticker PK, company_name, market, sector, industry, is_active for enable/disable)
 - **stock_prices**: Historical OHLCV data indexed on (stock_id, date), includes daily_return_pct and price_range
 - **news_events**: News articles with event_category, sentiment_score, content_hash for dedup, indexed on category and date
 - **event_price_correlations**: Historical event-price relationships tracked with win_rate and confidence_score
@@ -338,12 +338,57 @@ GET /api/stocks  # Rate limit: 100 req/min
 
 Configure limits per endpoint in API router.
 
+## Data Architecture (Generic & Extensible)
+
+The system is **fully generic** - no hardcoded stock tickers. All stocks are dynamically fetched from the database. To add a new stock:
+
+1. Insert into `stocks` table via API (`POST /api/stocks`)
+2. Set `is_active = True` to include in automated syncs
+3. Celery tasks automatically pick up new stocks on next scheduled run
+
+### Data Sources
+
+| Source | Data Provided | Update Frequency |
+|--------|---------------|------------------|
+| **Screener.in** | Company info, financials, ratios, quarterly/annual results | Daily (fundamentals) |
+| **Yahoo Finance** | Real-time prices, OHLCV history, dividends, splits | Every 15 min (market hours) |
+| **NewsAPI** | News articles, headlines, sentiment analysis | Every 30 min |
+
+### Intelligent Refresh Strategy
+
+Located in `backend/app/services/smart_data_manager.py`:
+
+```python
+# Sync types with different data requirements
+full_sync()       # All data - new stocks or weekly refresh
+price_sync()      # Prices only - every 15 min during market hours
+quarterly_sync()  # Quarterly financials - after earnings (Jan, Apr, Jul, Oct)
+annual_sync()     # Annual financials - post fiscal year (Apr-May for India)
+```
+
+**Celery Beat Schedule** (`celery_beat_schedule.py`):
+- `price-sync`: Every 15 min, Mon-Fri, 9:15 AM - 3:30 PM IST
+- `daily-sync`: 6 AM daily (company info, news)
+- `quarterly-sync`: 1st of Jan, Apr, Jul, Oct
+- `annual-sync`: April 15th yearly
+- `weekly-full-sync`: Sundays at 2 AM
+
+### Key Services
+
+| Service | Purpose | Location |
+|---------|---------|----------|
+| `SmartDataManager` | Orchestrates all data syncs | `services/smart_data_manager.py` |
+| `HybridFetcher` | Combines Screener + Yahoo data | `services/hybrid_fetcher.py` |
+| `ScreenerScraper` | Scrapes Screener.in for fundamentals | `services/screener_scraper.py` |
+| `FinancialFetcher` | Yahoo Finance wrapper | `services/financial_fetcher.py` |
+| `DataFetchers` | Legacy data fetching | `services/data_fetchers.py` |
+
 ## Next Steps (Roadmap)
 
-- Phase 1.5: Data fetchers (Yahoo Finance, NewsAPI) + Celery tasks (in progress)
-- Phase 2: API endpoints (search, details, prices, news)
-- Phase 3: Analysis engine (event categorization, sentiment, correlation)
-- Phase 4: Frontend MVP (Next.js setup, search, detail pages)
+- ~~Phase 1.5: Data fetchers + Celery tasks~~ ✅ Complete
+- Phase 2: Analysis engine (event categorization, sentiment, correlation)
+- Phase 3: Predictability scoring algorithm
+- Phase 4: Backtesting framework
 
 ## Important Files by Task
 
@@ -356,4 +401,51 @@ Configure limits per endpoint in API router.
 | Update config | `config.py`, `.env.example` |
 | Fix migration | `migrations/versions/*.py` |
 | Implement service logic | `services/*.py` |
+| Add new data source | `services/`, update `HybridFetcher` |
+| Modify refresh schedule | `celery_beat_schedule.py` |
+
+## Testing Patterns & Gotchas
+
+### Cache Isolation in Tests
+
+The `conftest.py` clears Redis cache before/after each test to prevent test pollution:
+
+```python
+@pytest.fixture(scope="function")
+def client(db: Session):
+    # Clear cache before test
+    from app.cache import cache
+    cache.clear()
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    # Clear cache after test
+    cache.clear()
+```
+
+**Important:** If tests fail with stale data, check cache isolation first.
+
+### Migration Naming Convention
+
+Alembic revisions use simple numeric IDs:
+- ✅ Correct: `revision = '006'`, `down_revision = '005'`
+- ❌ Wrong: `revision = '006_add_column'`, `down_revision = '005_something'`
+
+## Port Configuration
+
+Default ports (configurable via `.env`):
+
+| Service | Default Port | Env Variable |
+|---------|--------------|--------------|
+| Backend API | 7000 | `API_PORT` |
+| Frontend | 7004 | (in package.json) |
+| PostgreSQL | 5432 | `POSTGRES_PORT` |
+| Redis | 6379 | `REDIS_PORT` |
+
+## Documentation
+
+- **System Architecture**: `docs/system-architecture.html` - Interactive HTML explaining full system
+- **API Docs**: `http://localhost:7000/docs` (Swagger UI)
+- **This file**: Development guidance for Claude Code
 
